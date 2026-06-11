@@ -55,11 +55,14 @@ export function useRequisitionById(id?: number) {
           admin:usuarios!admin_id(id, nombre_completo),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
+            numero_item,
             precio_unitario_sugerido:precio_unitario,
             total_linea, notas, created_at,
+            completado, completado_at,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
             proveedor_sugerido:proveedores!proveedor_sugerido_id(id, nombre, whatsapp, codigo_interno)
-          )
+          ),
+          proveedor_final:proveedores!proveedor_final_id(id, nombre, contacto_nombre, telefono, whatsapp)
         `)
         .eq('id', id!)
         .single()
@@ -255,6 +258,65 @@ export function useUpdateRequisitionStatus() {
       toast.success('Estado actualizado')
     },
     onError: () => toast.error('Error al actualizar el estado'),
+  })
+}
+
+export function useMarcarItemCompletado() {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+
+  return useMutation({
+    mutationFn: async ({ itemId, requisicionId, completado }: { itemId: number; requisicionId: number; completado: boolean }) => {
+      const { error } = await supabase
+        .from('detalle_requisicion')
+        .update({
+          completado,
+          completado_at: completado ? new Date().toISOString() : null,
+          completado_por: completado ? user!.id : null,
+        })
+        .eq('id', itemId)
+      if (error) throw error
+
+      // Recalcular estado de la requisición
+      const { data: items } = await supabase
+        .from('detalle_requisicion')
+        .select('completado')
+        .eq('requisicion_id', requisicionId)
+      if (items) {
+        const total = items.length
+        const completados = items.filter((i: { completado: boolean }) => i.completado).length
+        let nuevoEstado: string | null = null
+        if (completados === total && total > 0) nuevoEstado = 'COMPLETADA'
+        else if (completados > 0) nuevoEstado = 'PARCIAL'
+        if (nuevoEstado) {
+          await supabase.from('requisiciones').update({ estado: nuevoEstado }).eq('id', requisicionId)
+        }
+      }
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['requisition', vars.requisicionId] })
+      queryClient.invalidateQueries({ queryKey: ['requisitions'] })
+    },
+    onError: () => { toast.error('Error al actualizar el ítem') },
+  })
+}
+
+export function useUpdateProveedorFinal() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ requisicionId, proveedorFinalId }: { requisicionId: number; proveedorFinalId: number | null }) => {
+      const { error } = await supabase
+        .from('requisiciones')
+        .update({ proveedor_final_id: proveedorFinalId })
+        .eq('id', requisicionId)
+      if (error) throw error
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['requisition', vars.requisicionId] })
+      toast.success('Proveedor final actualizado')
+    },
+    onError: () => { toast.error('Error al cambiar el proveedor') },
   })
 }
 

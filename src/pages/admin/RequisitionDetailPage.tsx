@@ -1,7 +1,8 @@
 ﻿import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Copy, Check, MessageCircle, Clock, CheckCircle2, ShoppingCart, PackageCheck, XCircle, RotateCcw } from 'lucide-react'
-import { useRequisitionById, useUpdateRequisitionStatus } from '@/hooks/useRequisitions'
+import { ArrowLeft, Copy, Check, MessageCircle, Clock, CheckCircle2, ShoppingCart, PackageCheck, XCircle, RotateCcw, Truck, ChevronDown } from 'lucide-react'
+import { useRequisitionById, useUpdateRequisitionStatus, useMarcarItemCompletado, useUpdateProveedorFinal } from '@/hooks/useRequisitions'
+import { useSuppliers } from '@/hooks/useSuppliers'
 import { usePriceModal } from '@/components/suppliers/PriceCompareModal'
 import { PriceCompareModal } from '@/components/suppliers/PriceCompareModal'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
@@ -19,6 +20,7 @@ const WORKFLOW: Array<{ estado: EstadoRequisicion; label: string; icon: React.Re
   { estado: 'EN_REVISION', label: 'En revisión', icon: <RotateCcw size={13} /> },
   { estado: 'APROBADA',    label: 'Aprobada',    icon: <CheckCircle2 size={13} /> },
   { estado: 'EN_COMPRA',   label: 'En compra',   icon: <ShoppingCart size={13} /> },
+  { estado: 'PARCIAL',     label: 'Parcial',     icon: <PackageCheck size={13} /> },
   { estado: 'COMPLETADA',  label: 'Completada',  icon: <PackageCheck size={13} /> },
 ]
 
@@ -64,10 +66,15 @@ export default function RequisitionDetailPage() {
   const navigate = useNavigate()
   const { data: req, isLoading } = useRequisitionById(Number(id))
   const updateStatus = useUpdateRequisitionStatus()
+  const marcarItem = useMarcarItemCompletado()
+  const updateProveedor = useUpdateProveedorFinal()
+  const { data: proveedores } = useSuppliers()
   const priceModal = usePriceModal()
   const [copied, setCopied] = useState(false)
   const [comentario, setComentario] = useState('')
   const [confirmAction, setConfirmAction] = useState<'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA' | null>(null)
+  const [proveedorFinalId, setProveedorFinalId] = useState<string>('')
+  const [showProveedorEditor, setShowProveedorEditor] = useState(false)
 
   if (isLoading) return <PageLoader />
   if (!req) return <div className="text-center py-20 text-gray-500">Requisición no encontrada.</div>
@@ -189,7 +196,7 @@ export default function RequisitionDetailPage() {
                   <ShoppingCart size={14} /> Iniciar compra
                 </button>
               )}
-              {req.estado === 'EN_COMPRA' && (
+              {(req.estado === 'EN_COMPRA' || req.estado === 'PARCIAL') && (
                 <button
                   onClick={() => setConfirmAction('COMPLETADA')}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm"
@@ -212,6 +219,66 @@ export default function RequisitionDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Proveedor final */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Proveedor</p>
+              {!['COMPLETADA', 'RECHAZADA'].includes(req.estado) && (
+                <button
+                  onClick={() => { setShowProveedorEditor(v => !v); setProveedorFinalId(String(req.proveedor_final_id ?? '')) }}
+                  className="flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline font-medium"
+                >
+                  <Truck size={11} /> Cambiar <ChevronDown size={11} />
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5 text-sm">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-gray-400 text-xs shrink-0">Proveedor sugerido</span>
+                <span className="font-medium text-gray-700 text-right">
+                  {(req.detalles ?? []).find(d => d.proveedor_sugerido)?.proveedor_sugerido?.nombre ?? '—'}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-gray-400 text-xs shrink-0">Proveedor final</span>
+                {req.proveedor_final ? (
+                  <span className="font-semibold text-[#1e3a5f] text-right flex items-center gap-1">
+                    {req.proveedor_final.nombre}
+                    {req.proveedor_final_id !== (req.detalles ?? []).find(d => d.proveedor_sugerido_id)?.proveedor_sugerido_id && (
+                      <span className="text-[9px] bg-orange-100 text-orange-700 border border-orange-200 rounded px-1 py-0.5 font-semibold ml-1">Modificado</span>
+                    )}
+                  </span>
+                ) : (
+                  <span className="text-gray-300 italic text-xs">Sin asignar</span>
+                )}
+              </div>
+            </div>
+            {showProveedorEditor && (
+              <div className="pt-2 border-t border-gray-100 space-y-2">
+                <select
+                  value={proveedorFinalId}
+                  onChange={(e) => setProveedorFinalId(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                >
+                  <option value="">— Sin proveedor —</option>
+                  {(proveedores ?? []).filter((p: any) => p.activo).map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+                <button
+                  disabled={updateProveedor.isPending}
+                  onClick={() => {
+                    updateProveedor.mutate({ requisicionId: req.id, proveedorFinalId: proveedorFinalId ? Number(proveedorFinalId) : null })
+                    setShowProveedorEditor(false)
+                  }}
+                  className="w-full py-2 rounded-lg bg-[#1e3a5f] text-white text-sm font-semibold hover:bg-[#162d4a] transition-colors disabled:opacity-50"
+                >
+                  {updateProveedor.isPending ? 'Guardando...' : 'Guardar proveedor'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -219,12 +286,27 @@ export default function RequisitionDetailPage() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-700">Insumos solicitados</h3>
-          <span className="text-xs text-gray-400">{req.detalles?.length ?? 0} {(req.detalles?.length ?? 0) === 1 ? 'ítem' : 'ítems'}</span>
+          <div className="flex items-center gap-3">
+            {(() => {
+              const total = req.detalles?.length ?? 0
+              const recibidos = req.detalles?.filter(d => d.completado).length ?? 0
+              return (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                  recibidos === total && total > 0 ? 'bg-emerald-100 text-emerald-700'
+                  : recibidos > 0 ? 'bg-violet-100 text-violet-700'
+                  : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {recibidos}/{total} recibidos
+                </span>
+              )
+            })()}
+            <span className="text-xs text-gray-400">{req.detalles?.length ?? 0} {(req.detalles?.length ?? 0) === 1 ? 'ítem' : 'ítems'}</span>
+          </div>
         </div>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b">
-              {['Código', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'P. Unitario', 'Total', ''].map((h) => (
+              {['#', 'Código', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'P. Unitario', 'Total', 'Recibido', ''].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                   {h}
                 </th>
@@ -232,10 +314,11 @@ export default function RequisitionDetailPage() {
             </tr>
           </thead>
           <tbody>
-            {(req.detalles ?? []).map((d) => (
-              <tr key={d.id} className="border-t hover:bg-gray-50/50 transition-colors">
+            {(req.detalles ?? []).map((d, idx) => (
+              <tr key={d.id} className={`border-t transition-colors ${d.completado ? 'bg-emerald-50/50' : 'hover:bg-gray-50/50'}`}>
+                <td className="px-4 py-3 text-xs font-mono text-gray-400">{d.numero_item ?? idx + 1}</td>
                 <td className="px-4 py-3 font-mono text-xs text-gray-400">{d.producto?.codigo}</td>
-                <td className="px-4 py-3 font-medium text-gray-800">{d.producto?.nombre}</td>
+                <td className={`px-4 py-3 font-medium ${d.completado ? 'line-through text-gray-400' : 'text-gray-800'}`}>{d.producto?.nombre}</td>
                 <td className="px-4 py-3 text-gray-400 text-xs">{d.producto?.unidad_medida}</td>
                 <td className="px-4 py-3 font-bold text-center text-gray-700">{d.cantidad}</td>
                 <td className="px-4 py-3">
@@ -247,6 +330,34 @@ export default function RequisitionDetailPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-700"><CurrencyCOP value={(d as any).precio_unitario_sugerido} /></td>
                 <td className="px-4 py-3 font-semibold text-gray-900"><CurrencyCOP value={((d as any).precio_unitario_sugerido ?? 0) * d.cantidad} /></td>
+                <td className="px-4 py-3">
+                  {d.completado ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 size={10} /> Recibido
+                      </span>
+                      {!['COMPLETADA', 'RECHAZADA'].includes(req.estado) && (
+                        <button
+                          onClick={() => marcarItem.mutate({ itemId: d.id, requisicionId: req.id, completado: false })}
+                          className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
+                          title="Desmarcar"
+                        >✕</button>
+                      )}
+                    </div>
+                  ) : (
+                    ['EN_COMPRA', 'PARCIAL', 'APROBADA'].includes(req.estado) ? (
+                      <button
+                        disabled={marcarItem.isPending}
+                        onClick={() => marcarItem.mutate({ itemId: d.id, requisicionId: req.id, completado: true })}
+                        className="text-xs text-white bg-[#1e3a5f] hover:bg-[#162d4a] px-2.5 py-1 rounded-lg font-semibold transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        Marcar recibido
+                      </button>
+                    ) : (
+                      <span className="text-gray-300 text-xs italic">—</span>
+                    )
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   {d.producto && (
                     <button
@@ -261,8 +372,8 @@ export default function RequisitionDetailPage() {
           </tbody>
           <tfoot className="border-t-2 border-gray-100">
             <tr className="bg-gray-50">
-              <td colSpan={6} className="px-4 py-3.5 text-right text-sm font-semibold text-gray-500">Total estimado</td>
-              <td colSpan={2} className="px-4 py-3.5 font-bold text-xl text-[#1e3a5f]">
+              <td colSpan={7} className="px-4 py-3.5 text-right text-sm font-semibold text-gray-500">Total estimado</td>
+              <td colSpan={3} className="px-4 py-3.5 font-bold text-xl text-[#1e3a5f]">
                 <CurrencyCOP value={req.total_estimado} />
               </td>
             </tr>

@@ -28,6 +28,7 @@ export type EstadoRequisicion =
   | 'EN_REVISION'
   | 'APROBADA'
   | 'EN_COMPRA'
+  | 'PARCIAL'
   | 'COMPLETADA'
   | 'RECHAZADA'
 
@@ -46,6 +47,12 @@ export interface Categoria {
   id: number
   nombre: string
   icono?: string
+}
+
+export interface UnidadMedida {
+  id: string
+  nombre: string
+  abreviatura: string
 }
 
 export interface Proveedor {
@@ -133,8 +140,10 @@ export interface Requisicion {
   observaciones?: string
   total_estimado: number
   admin_id?: string
+  proveedor_final_id?: number
   created_at: string
   empleado?: Usuario
+  proveedor_final?: Proveedor
   detalles?: DetalleRequisicion[]
   historial?: HistorialRequisicion[]
 }
@@ -144,9 +153,12 @@ export interface DetalleRequisicion {
   requisicion_id: number
   producto_id: number
   cantidad: number
+  numero_item?: number
   proveedor_sugerido_id?: number
   precio_unitario_sugerido?: number
   notas?: string
+  completado: boolean
+  completado_at?: string
   producto?: Producto
   proveedor_sugerido?: Proveedor
 }
