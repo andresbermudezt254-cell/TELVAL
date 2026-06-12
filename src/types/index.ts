@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'empleado'
+export type UserRole = 'admin' | 'empleado' | 'almacen' | 'superadmin'
 
 export type Especialidad =
   | 'ACABADOS DIA'
@@ -50,7 +50,7 @@ export interface Categoria {
 }
 
 export interface UnidadMedida {
-  id: string
+  id: number
   nombre: string
   abreviatura: string
 }
@@ -132,7 +132,6 @@ export interface Requisicion {
   fecha_solicitud: string
   fecha_maxima_entrega?: string
   fecha_aprobacion?: string
-  item_ppto?: string
   item_sinco_adpro?: string
   notas_empleado?: string
   notas_admin?: string
@@ -155,12 +154,16 @@ export interface DetalleRequisicion {
   cantidad: number
   numero_item?: number
   proveedor_sugerido_id?: number
-  precio_unitario_sugerido?: number
+  precio_unitario?: number
   notas?: string
   completado: boolean
   completado_at?: string
+  completado_por?: string
+  unidad_medida_id?: number
   producto?: Producto
   proveedor_sugerido?: Proveedor
+  unidad_medida?: UnidadMedida
+  completado_por_usuario?: Usuario
 }
 
 export interface CartItem {
@@ -175,7 +178,6 @@ export interface NuevaRequisicionForm {
   punto: string
   categoria: CategoriaRequisicion
   fecha_maxima_entrega?: string
-  item_ppto?: string
   item_sinco_adpro?: string
   notas_empleado?: string
   items: Array<{
@@ -205,4 +207,38 @@ export interface HistorialRequisicion {
   comentario?: string
   created_at: string
   usuario?: Usuario
+}
+
+export interface DespachoDetalle {
+  id: number
+  detalle_id: number
+  requisicion_id: number
+  producto_id: number
+  cantidad_solicitada: number
+  cantidad_despachada: number
+  usuario_id: string
+  observaciones?: string
+  created_at: string
+  usuario?: Usuario
+  producto?: Producto
+}
+
+export interface ResumenDespacho {
+  requisicion_id: number
+  codigo: string
+  estado: EstadoRequisicion
+  especialidad: Especialidad
+  punto: string
+  numero_aviso?: string
+  fecha_solicitud: string
+  fecha_maxima_entrega?: string
+  direccion_despacho?: string
+  notas_almacen?: string
+  despachado_at?: string
+  despachado_por?: string
+  despachado_por_nombre?: string
+  total_items: number
+  total_cantidad_solicitada: number
+  total_cantidad_despachada: number
+  estado_despacho: 'PENDIENTE' | 'PARCIAL' | 'COMPLETO'
 }

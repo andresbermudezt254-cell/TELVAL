@@ -86,6 +86,11 @@ export const useAuthStore = create<AuthState>()(
           .select('*')
           .eq('id', userId)
           .single()
+        if (data && data.activo === false) {
+          await supabase.auth.signOut()
+          set({ user: null, session: false, otpVerified: false, pendingUserId: null, pendingEmail: null, devCode: null })
+          return
+        }
         if (data) set({ user: data as Usuario, session: true })
       },
 

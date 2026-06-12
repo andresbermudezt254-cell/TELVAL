@@ -35,7 +35,6 @@ export const requisicionSchema = z.object({
   punto: z.string().min(1, 'Ingresa el punto'),
   categoria: z.enum(categoriaOptions),
   fecha_maxima_entrega: z.string().optional(),
-  item_ppto: z.string().optional(),
   item_sinco_adpro: z.string().optional(),
   notas_empleado: z.string().optional(),
 })
@@ -55,7 +54,7 @@ export const usuarioCreateSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
   nombre_completo: z.string().min(2, 'Mínimo 2 caracteres'),
-  rol: z.enum(['admin', 'empleado']),
+  rol: z.enum(['admin', 'empleado', 'almacen', 'superadmin']),
   especialidad: z.enum(especialidadOptions).optional(),
   whatsapp: z.string().optional(),
 })
@@ -63,15 +62,15 @@ export type UsuarioCreateForm = z.infer<typeof usuarioCreateSchema>
 
 export const usuarioEditSchema = z.object({
   nombre_completo: z.string().min(2, 'Mínimo 2 caracteres'),
-  rol: z.enum(['admin', 'empleado']),
+  rol: z.enum(['admin', 'empleado', 'almacen', 'superadmin']),
   especialidad: z.enum(especialidadOptions).optional(),
   whatsapp: z.string().optional(),
 })
 export type UsuarioEditForm = z.infer<typeof usuarioEditSchema>
 
 export const precioProveedorSchema = z.object({
-  producto_id: z.number({ required_error: 'Selecciona un producto' }),
-  precio_unitario: z.number({ required_error: 'Ingresa el precio' }).positive('Debe ser mayor que 0'),
+  producto_id: z.coerce.number().int().positive('Selecciona un producto'),
+  precio_unitario: z.coerce.number().positive('Debe ser mayor que 0'),
   fecha_precio: z.string().optional(),
   notas: z.string().optional(),
 })

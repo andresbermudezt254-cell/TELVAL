@@ -213,7 +213,12 @@ function EditUserModal({ user, onClose }: { user: Usuario | null; onClose: () =>
             label="Rol"
             required
             error={errors.rol?.message as string}
-            options={[{ value: 'empleado', label: 'Empleado' }, { value: 'admin', label: 'Administrador' }]}
+            options={[
+              { value: 'empleado', label: 'Empleado' },
+              { value: 'almacen', label: 'Almacén' },
+              { value: 'admin', label: 'Administrador' },
+              { value: 'superadmin', label: 'Superadmin' },
+            ]}
             {...register('rol')}
           />
           <Select
@@ -270,7 +275,12 @@ function CreateUserModal({ open, onClose }: { open: boolean; onClose: () => void
             label="Rol"
             required
             error={errors.rol?.message as string}
-            options={[{ value: 'empleado', label: 'Empleado' }, { value: 'admin', label: 'Administrador' }]}
+            options={[
+              { value: 'empleado', label: 'Empleado' },
+              { value: 'almacen', label: 'Almacén' },
+              { value: 'admin', label: 'Administrador' },
+              { value: 'superadmin', label: 'Superadmin' },
+            ]}
             {...register('rol')}
           />
           <Select
@@ -296,6 +306,7 @@ export default function UsersPage() {
   const [resetUser, setResetUser] = useState<Usuario | null>(null)
 
   const adminCount = users?.filter((u) => u.rol === 'admin').length ?? 0
+  const warehouseCount = users?.filter((u) => u.rol === 'almacen').length ?? 0
   const empleadoCount = users?.filter((u) => u.rol === 'empleado').length ?? 0
   const activeCount = users?.filter((u) => u.activo).length ?? 0
 
@@ -313,6 +324,10 @@ export default function UsersPage() {
           <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full">
             <Users size={13} className="text-blue-600" />
             <span className="text-xs font-semibold text-blue-700">{empleadoCount} empleado{empleadoCount !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-100 rounded-full">
+            <Users size={13} className="text-orange-600" />
+            <span className="text-xs font-semibold text-orange-700">{warehouseCount} almacén</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-100 rounded-full">
             <UserCheck size={13} className="text-green-600" />
@@ -343,7 +358,7 @@ export default function UsersPage() {
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0 ${
-                        u.rol === 'admin' ? 'bg-purple-600' : 'bg-[#1e3a5f]'
+                        u.rol === 'superadmin' ? 'bg-fuchsia-600' : u.rol === 'admin' ? 'bg-purple-600' : u.rol === 'almacen' ? 'bg-orange-600' : 'bg-[#1e3a5f]'
                       }`}>
                         {u.nombre_completo.charAt(0).toUpperCase()}
                       </div>
@@ -372,10 +387,16 @@ export default function UsersPage() {
                       : <span className="text-gray-300 text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3.5">
-                    <Badge className={u.rol === 'admin'
-                      ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                      : 'bg-blue-50 text-blue-700 border border-blue-100'}>
-                      {u.rol === 'admin' ? 'Administrador' : 'Empleado'}
+                    <Badge className={
+                      u.rol === 'superadmin'
+                        ? 'bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200'
+                        : u.rol === 'admin'
+                          ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                          : u.rol === 'almacen'
+                            ? 'bg-orange-100 text-orange-700 border border-orange-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-100'
+                    }>
+                      {u.rol === 'superadmin' ? 'Superadmin' : u.rol === 'admin' ? 'Administrador' : u.rol === 'almacen' ? 'Almacén' : 'Empleado'}
                     </Badge>
                   </td>
                   <td className="px-4 py-3.5">

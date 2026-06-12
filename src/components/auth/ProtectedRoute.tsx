@@ -5,10 +5,10 @@ import type { UserRole } from '@/types'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  rol?: UserRole
+  roles?: UserRole[]
 }
 
-export function ProtectedRoute({ children, rol }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   const { user, loading, otpVerified, pendingUserId } = useAuthStore()
 
   if (loading) return <PageLoader />
@@ -24,8 +24,10 @@ export function ProtectedRoute({ children, rol }: ProtectedRouteProps) {
   // Sesión activa pero OTP no verificado en esta sesión
   if (!otpVerified) return <Navigate to="/login" replace />
 
-  if (rol && user.rol !== rol) {
-    return <Navigate to={user.rol === 'admin' ? '/admin/dashboard' : '/catalogo'} replace />
+  if (roles && !roles.includes(user.rol)) {
+    if (user.rol === 'admin' || user.rol === 'superadmin') return <Navigate to="/admin/dashboard" replace />
+    if (user.rol === 'almacen') return <Navigate to="/almacen" replace />
+    return <Navigate to="/catalogo" replace />
   }
 
   return <>{children}</>

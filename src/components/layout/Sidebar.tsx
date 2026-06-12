@@ -26,9 +26,20 @@ const adminLinks = [
   { to: '/catalogo', icon: ShoppingBag, label: 'Catálogo' },
   { to: '/admin/productos', icon: Package, label: 'Productos' },
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
-  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
   { to: '/admin/consolidado', icon: ListOrdered, label: 'Consolidado' },
+  { to: '/admin/almacen', icon: Truck, label: 'Almacén' },
   { to: '/admin/reportes', icon: BarChart3, label: 'Reportes' },
+]
+
+const superAdminLinks = [
+  ...adminLinks,
+  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
+]
+
+const warehouseLinks = [
+  { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/almacen', icon: Truck, label: 'Almacén' },
+  { to: '/admin/requisiciones', icon: ClipboardList, label: 'Requisiciones' },
 ]
 
 const employeeLinks = [
@@ -41,7 +52,20 @@ export function Sidebar({ onClose }: SidebarProps) {
   const user = useAuthStore((s) => s.user)
   const { logout } = useAuthStore()
   const navigate = useNavigate()
-  const links = user?.rol === 'admin' ? adminLinks : employeeLinks
+  const links = user?.rol === 'superadmin'
+    ? superAdminLinks
+    : user?.rol === 'admin'
+      ? adminLinks
+      : user?.rol === 'almacen'
+        ? warehouseLinks
+        : employeeLinks
+
+  const roleLabelMap = {
+    admin: 'Administrador',
+    empleado: 'Empleado',
+    almacen: 'Almacén',
+    superadmin: 'Superadmin',
+  } as const
 
   const handleLogout = async () => {
     await logout()
@@ -74,7 +98,7 @@ export function Sidebar({ onClose }: SidebarProps) {
       {/* Section label */}
       <div className="px-5 pt-5 pb-2">
         <p className="text-[9px] font-bold uppercase tracking-widest text-blue-400/70">
-          {user?.rol === 'admin' ? 'Administración' : 'Mi espacio'}
+          {user?.rol === 'admin' || user?.rol === 'superadmin' ? 'Administración' : user?.rol === 'almacen' ? 'Recepción' : 'Mi espacio'}
         </p>
       </div>
 
@@ -117,7 +141,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-              <p className="text-[10px] text-blue-300 capitalize">{user.rol === 'admin' ? 'Administrador' : 'Empleado'}</p>
+              <p className="text-[10px] text-blue-300 capitalize">{roleLabelMap[user.rol]}</p>
             </div>
             <button
               onClick={handleLogout}

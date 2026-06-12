@@ -13,13 +13,16 @@ import SuppliersPage from '@/pages/admin/SuppliersPage'
 import UsersPage from '@/pages/admin/UsersPage'
 import ReportsPage from '@/pages/admin/ReportsPage'
 import OrderSummaryPage from '@/pages/admin/OrderSummaryPage'
+import WarehousePage from '@/pages/admin/WarehousePage'
 import CatalogPage from '@/pages/employee/CatalogPage'
 import NewRequisitionPage from '@/pages/employee/NewRequisitionPage'
 import MyRequisitionsPage from '@/pages/employee/MyRequisitionsPage'
 
 function RoleRedirect() {
   const user = useAuthStore((s) => s.user)
-  return <Navigate to={user?.rol === 'admin' ? '/admin/dashboard' : '/catalogo'} replace />
+  if (user?.rol === 'admin' || user?.rol === 'superadmin') return <Navigate to="/admin/dashboard" replace />
+  if (user?.rol === 'almacen') return <Navigate to="/almacen" replace />
+  return <Navigate to="/catalogo" replace />
 }
 
 export const router = createBrowserRouter([
@@ -40,6 +43,14 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <RoleRedirect /> },
+      {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute>
+            <RoleRedirect />
+          </ProtectedRoute>
+        ),
+      },
       // Employee + Admin shared routes
       {
         path: 'catalogo',
@@ -58,6 +69,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'requisiciones/nueva',
+        element: (
+          <ProtectedRoute roles={['empleado', 'superadmin']}>
+            <NewRequisitionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: 'mis-requisiciones',
         element: (
           <ProtectedRoute>
@@ -68,39 +87,47 @@ export const router = createBrowserRouter([
       // Admin routes
       {
         path: 'admin',
-        element: <ProtectedRoute rol="admin"><Navigate to="/admin/dashboard" replace /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><Navigate to="/admin/dashboard" replace /></ProtectedRoute>,
       },
       {
         path: 'admin/dashboard',
-        element: <ProtectedRoute rol="admin"><DashboardPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin', 'almacen']}><DashboardPage /></ProtectedRoute>,
       },
       {
         path: 'admin/requisiciones',
-        element: <ProtectedRoute rol="admin"><RequisitionsPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><RequisitionsPage /></ProtectedRoute>,
       },
       {
         path: 'admin/requisiciones/:id',
-        element: <ProtectedRoute rol="admin"><RequisitionDetailPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin', 'almacen']}><RequisitionDetailPage /></ProtectedRoute>,
       },
       {
         path: 'admin/productos',
-        element: <ProtectedRoute rol="admin"><ProductsPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><ProductsPage /></ProtectedRoute>,
       },
       {
         path: 'admin/proveedores',
-        element: <ProtectedRoute rol="admin"><SuppliersPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><SuppliersPage /></ProtectedRoute>,
       },
       {
         path: 'admin/usuarios',
-        element: <ProtectedRoute rol="admin"><UsersPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['superadmin']}><UsersPage /></ProtectedRoute>,
       },
       {
         path: 'admin/reportes',
-        element: <ProtectedRoute rol="admin"><ReportsPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><ReportsPage /></ProtectedRoute>,
       },
       {
         path: 'admin/consolidado',
-        element: <ProtectedRoute rol="admin"><OrderSummaryPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><OrderSummaryPage /></ProtectedRoute>,
+      },
+      {
+        path: 'admin/almacen',
+        element: <ProtectedRoute roles={['almacen', 'superadmin', 'admin']}><WarehousePage /></ProtectedRoute>,
+      },
+      {
+        path: 'almacen',
+        element: <ProtectedRoute roles={['almacen', 'superadmin', 'admin']}><WarehousePage /></ProtectedRoute>,
       },
     ],
   },

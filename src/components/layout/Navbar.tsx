@@ -37,6 +37,12 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
   const initial = (user?.nombre_completo || user?.email || '?').charAt(0).toUpperCase()
   const displayName = user?.nombre_completo?.split(' ').slice(0, 2).join(' ') || user?.email || ''
+  const roleLabelMap = {
+    admin: 'Administrador',
+    empleado: 'Empleado',
+    almacen: 'Almacén',
+    superadmin: 'Superadmin',
+  } as const
 
   return (
     <>
@@ -98,7 +104,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             </div>
             <div className="hidden sm:block">
               <p className="text-xs font-semibold text-gray-800 leading-tight">{displayName}</p>
-              <p className="text-[10px] text-gray-400 capitalize leading-tight">{user?.rol === 'admin' ? 'Administrador' : 'Empleado'}</p>
+              <p className="text-[10px] text-gray-400 capitalize leading-tight">{user?.rol ? roleLabelMap[user.rol] : ''}</p>
             </div>
           </div>
         </div>

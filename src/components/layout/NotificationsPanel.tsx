@@ -51,7 +51,7 @@ export function NotificationsPanel({ open, onClose }: Props) {
   const handleClick = (n: Notificacion) => {
     if (!n.leida) markRead(n.id)
     if (n.requisicion_id) {
-      const path = user?.rol === 'admin'
+      const path = user?.rol === 'admin' || user?.rol === 'almacen' || user?.rol === 'superadmin'
         ? `/admin/requisiciones/${n.requisicion_id}`
         : '/mis-requisiciones'
       navigate(path)
