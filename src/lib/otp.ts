@@ -36,16 +36,19 @@ export async function enviarOTP(userId: string, email: string): Promise<{ devCod
 
   // Enviar por correo si EmailJS está configurado
   if (EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY) {
-    await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      { to_email: email, otp_code: codigo, app_name: 'TELVAL Compras', expire_min: '10' },
-      { publicKey: EMAILJS_PUBLIC_KEY }
-    )
-    return {}
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        { to_email: email, otp_code: codigo, app_name: 'TELVAL Compras', expire_min: '10' },
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      )
+    } catch (error) {
+      console.warn('No se pudo enviar el OTP por correo:', error)
+    }
   }
 
-  // Sin EmailJS: devolver código para mostrarlo en pantalla
+  // Devolver el código para que siempre se muestre en pantalla
   console.info(`[OTP] Código para ${email}: ${codigo}`)
   return { devCode: codigo }
 }
