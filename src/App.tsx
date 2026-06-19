@@ -19,10 +19,8 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        // Sesión cerrada: limpiar todo el estado de autenticación
         setUser(null)
         setLoading(false)
-        useAuthStore.getState().clearPending()
       }
     })
 
