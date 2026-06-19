@@ -9,20 +9,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
-  const { user, loading, otpVerified, pendingUserId } = useAuthStore()
+  const { user, loading } = useAuthStore()
 
   if (loading) return <PageLoader />
 
-  // Si hay un OTP pendiente sin verificar, redirigir al OTP
-  if (pendingUserId && !otpVerified) {
-    return <Navigate to="/verificar-otp" replace />
-  }
-
-  // Sin sesión autenticada
   if (!user) return <Navigate to="/login" replace />
-
-  // Sesión activa pero OTP no verificado en esta sesión
-  if (!otpVerified) return <Navigate to="/login" replace />
 
   if (roles && !roles.includes(user.rol)) {
     if (user.rol === 'admin' || user.rol === 'superadmin') return <Navigate to="/admin/dashboard" replace />

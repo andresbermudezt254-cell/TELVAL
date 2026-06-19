@@ -19,14 +19,12 @@ export default function LoginPage() {
   } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) })
 
   const onSubmit = async (data: LoginForm) => {
-    const { error, needsOtp } = await login(data.email, data.password)
+    const { error } = await login(data.email, data.password)
     if (error) {
       toast.error(error)
       return
     }
-    if (needsOtp) {
-      navigate('/verificar-otp')
-    }
+    navigate('/')
   }
 
   return (

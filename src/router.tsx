@@ -5,7 +5,6 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useAuthStore } from '@/store/authStore'
 
 import LoginPage from '@/pages/auth/LoginPage'
-import OTPPage from '@/pages/auth/OTPPage'
 import DashboardPage from '@/pages/admin/DashboardPage'
 import RequisitionsPage from '@/pages/admin/RequisitionsPage'
 import RequisitionDetailPage from '@/pages/admin/RequisitionDetailPage'
@@ -31,11 +30,6 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
-    errorElement: <ErrorPage />,
-  },
-  {
-    path: '/verificar-otp',
-    element: <OTPPage />,
     errorElement: <ErrorPage />,
   },
   {
