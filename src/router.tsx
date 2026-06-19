@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { ErrorPage } from '@/components/ui/ErrorPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { useAuthStore } from '@/store/authStore'
 
@@ -14,6 +15,7 @@ import UsersPage from '@/pages/admin/UsersPage'
 import ReportsPage from '@/pages/admin/ReportsPage'
 import OrderSummaryPage from '@/pages/admin/OrderSummaryPage'
 import WarehousePage from '@/pages/admin/WarehousePage'
+import WarehouseArrivalsPage from '@/pages/admin/WarehouseArrivalsPage'
 import CatalogPage from '@/pages/employee/CatalogPage'
 import NewRequisitionPage from '@/pages/employee/NewRequisitionPage'
 import MyRequisitionsPage from '@/pages/employee/MyRequisitionsPage'
@@ -29,10 +31,12 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+    errorElement: <ErrorPage />,
   },
   {
     path: '/verificar-otp',
     element: <OTPPage />,
+    errorElement: <ErrorPage />,
   },
   {
     path: '/',
@@ -41,6 +45,7 @@ export const router = createBrowserRouter([
         <AppLayout />
       </ProtectedRoute>
     ),
+    errorElement: <ErrorPage />,
     children: [
       { index: true, element: <RoleRedirect /> },
       {
@@ -111,7 +116,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'admin/usuarios',
-        element: <ProtectedRoute roles={['superadmin']}><UsersPage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['admin', 'superadmin']}><UsersPage /></ProtectedRoute>,
       },
       {
         path: 'admin/reportes',
@@ -124,6 +129,10 @@ export const router = createBrowserRouter([
       {
         path: 'admin/almacen',
         element: <ProtectedRoute roles={['almacen', 'superadmin', 'admin']}><WarehousePage /></ProtectedRoute>,
+      },
+      {
+        path: 'admin/almacen/llegadas',
+        element: <ProtectedRoute roles={['almacen', 'superadmin', 'admin']}><WarehouseArrivalsPage /></ProtectedRoute>,
       },
       {
         path: 'almacen',

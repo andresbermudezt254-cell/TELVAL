@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: telval-compras-frontend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run preview
+    envVars:
+      - key: VITE_SUPABASE_URL
+        scope: build_and_run
+      - key: VITE_SUPABASE_ANON_KEY
+        scope: build_and_run
+      - key: VITE_ADMIN_API_URL
+        scope: runtime
+  - type: web
+    name: telval-compras-admin-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run admin-api
+    envVars:
+      - key: SUPABASE_URL
+        scope: build_and_run
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        scope: build_and_run

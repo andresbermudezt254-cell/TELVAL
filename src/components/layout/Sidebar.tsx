@@ -28,6 +28,8 @@ const adminLinks = [
   { to: '/admin/proveedores', icon: Truck, label: 'Proveedores' },
   { to: '/admin/consolidado', icon: ListOrdered, label: 'Consolidado' },
   { to: '/admin/almacen', icon: Truck, label: 'Almacén' },
+  { to: '/admin/almacen/llegadas', icon: ListOrdered, label: 'Llegadas' },
+  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
   { to: '/admin/reportes', icon: BarChart3, label: 'Reportes' },
 ]
 

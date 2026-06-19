@@ -34,7 +34,16 @@ export const requisicionSchema = z.object({
   numero_aviso: z.string().min(1, 'Ingresa el número de aviso o escribe STOCK'),
   punto: z.string().min(1, 'Ingresa el punto'),
   categoria: z.enum(categoriaOptions),
-  fecha_maxima_entrega: z.string().optional(),
+  fecha_maxima_entrega: z
+    .string()
+    .nonempty('La fecha de entrega es obligatoria')
+    .refine((value) => {
+      const selected = new Date(value)
+      selected.setHours(0, 0, 0, 0)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      return !Number.isNaN(selected.getTime()) && selected >= today
+    }, 'La fecha no puede ser anterior a hoy'),
   item_sinco_adpro: z.string().optional(),
   notas_empleado: z.string().optional(),
 })

@@ -135,7 +135,7 @@ export function generarResumenWhatsApp(
     cantidad: number
     producto?: { nombre: string; unidad_medida: string; codigo?: string }
     proveedor_sugerido?: { nombre: string }
-    precio_unitario_sugerido?: number
+    precio_unitario?: number
   }>
 ): string {
   const fecha = requisicion.fecha_maxima_entrega
@@ -164,7 +164,7 @@ export function generarResumenWhatsApp(
     texto += `*PROVEEDOR: ${proveedor}*\n`
     let subtotal = 0
     for (const item of items) {
-      const precioUnit = item.precio_unitario_sugerido ?? 0
+      const precioUnit = item.precio_unitario ?? 0
       const sub = precioUnit * item.cantidad
       subtotal += sub
       totalGeneral += sub

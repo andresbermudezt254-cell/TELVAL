@@ -1,8 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import type { Requisicion, NuevaRequisicionForm } from '@/types'
 import { toast } from 'sonner'
+import type { UseQueryResult } from '@tanstack/react-query'
 
 export function useRequisitions(filters?: {
   estado?: string | string[]
@@ -10,63 +11,65 @@ export function useRequisitions(filters?: {
   especialidad?: string
   empleadoId?: string
   page?: number
-}) {
+}): UseQueryResult<{ data: Requisicion[]; count: number }, Error> {
   const user = useAuthStore((s) => s.user)
   const page = filters?.page !== undefined ? filters.page + 1 : 1
   const pageSize = 20
 
-  return useQuery({
-    queryKey: ['requisitions', filters, user?.rol],
-    queryFn: async () => {
-      let query = supabase
-        .from('requisiciones')
-        .select(`
-          *,
-          empleado:usuarios!empleado_id(id, nombre_completo, email, especialidad),
-          proveedor_final:proveedores!proveedor_final_id(id, nombre),
-          detalles:detalle_requisicion(id, completado)
-        `, { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1)
+  const queryFn = async (): Promise<{ data: Requisicion[]; count: number }> => {
+    let query = supabase
+      .from('requisiciones')
+      .select(`
+        *,
+        empleado:usuarios!requisiciones_empleado_id_fkey(id, nombre_completo, email, especialidad),
+        detalles:detalle_requisicion(id)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range((page - 1) * pageSize, page * pageSize - 1)
 
-      if (user?.rol === 'empleado') {
-        query = query.eq('empleado_id', user.id)
-      }
-      if (filters?.estado) {
-        if (Array.isArray(filters.estado)) query = query.in('estado', filters.estado)
-        else query = query.eq('estado', filters.estado)
-      }
-      if (filters?.categoria) query = query.eq('categoria', filters.categoria)
-      if (filters?.especialidad) query = query.eq('especialidad', filters.especialidad)
-      if (filters?.empleadoId) query = query.eq('empleado_id', filters.empleadoId)
+    if (user?.rol === 'empleado') {
+      query = query.eq('empleado_id', user.id)
+    }
+    if (filters?.estado) {
+      if (Array.isArray(filters.estado)) query = query.in('estado', filters.estado)
+      else query = query.eq('estado', filters.estado)
+    }
+    if (filters?.categoria) query = query.eq('categoria', filters.categoria)
+    if (filters?.especialidad) query = query.eq('especialidad', filters.especialidad)
+    if (filters?.empleadoId) query = query.eq('empleado_id', filters.empleadoId)
 
-      const { data, error, count } = await query
-      if (error) throw error
-      return { data: data as Requisicion[], count: count ?? 0 }
-    },
+    const { data, error, count } = await query
+    if (error) throw error
+    return { data: data as Requisicion[], count: count ?? 0 }
+  }
+
+  const queryOptions: UseQueryOptions<{ data: Requisicion[]; count: number }, Error> = {
+    queryKey: ['requisitions', user?.id, user?.rol, filters],
+    queryFn,
     enabled: !!user,
-  })
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    retry: false,
+  }
+
+  return useQuery<{ data: Requisicion[]; count: number }, Error>(queryOptions)
 }
 
 export function useRequisitionById(id?: number) {
-  return useQuery({
+  return useQuery<Requisicion | null, Error>({
     queryKey: ['requisition', id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('requisiciones')
         .select(`
           *,
-          empleado:usuarios!empleado_id(id, nombre_completo, email, especialidad, whatsapp),
-          admin:usuarios!admin_id(id, nombre_completo),
-          proveedor_final:proveedores!proveedor_final_id(id, nombre, whatsapp, contacto_nombre),
+          empleado:usuarios!requisiciones_empleado_id_fkey(id, nombre_completo, email, especialidad, whatsapp),
+          admin:usuarios!requisiciones_admin_id_fkey(id, nombre_completo),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
-            numero_item, unidad_medida_id, precio_unitario, notas, created_at,
-            completado, completado_at, completado_por,
+            precio_unitario, total_linea, notas, created_at,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
-            proveedor_sugerido:proveedores!proveedor_sugerido_id(id, nombre, whatsapp, codigo_interno),
-            unidad_medida:unidades_medida(id, nombre, abreviatura),
-            completado_por_usuario:usuarios!detalle_requisicion_completado_por_fkey(id, nombre_completo)
+            proveedor_sugerido:proveedores!detalle_requisicion_proveedor_sugerido_id_fkey(id, nombre, whatsapp, codigo_interno)
           ),
           historial:historial_requisicion(
             id, requisicion_id, estado_anterior, estado_nuevo, usuario_id, comentario, created_at,
@@ -178,7 +181,7 @@ export function useCreateRequisition() {
       return req as Requisicion
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['requisitions'], refetchType: 'all' })
+      await queryClient.invalidateQueries({ queryKey: ['requisitions'] })
       toast.success('Requisición enviada exitosamente')
     },
     onError: (err) => {
@@ -375,16 +378,18 @@ export function useWarehouseVerdict() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ requisicionId, estado, notas }: { requisicionId: number; estado: 'PARCIAL' | 'COMPLETADA'; notas?: string }) => {
+    mutationFn: async ({ requisicionId, estado, notas, direccion_despacho, cantidad_despachada }: { requisicionId: number; estado: 'PARCIAL' | 'COMPLETADA'; notas?: string; direccion_despacho: string; cantidad_despachada: number }) => {
       const { data: prev } = await supabase
         .from('requisiciones')
         .select('estado')
         .eq('id', requisicionId)
         .single()
 
+      const formattedNotas = `Cantidad despachada: ${cantidad_despachada}. ${notas ?? ''}`.trim()
+
       const { error } = await supabase
         .from('requisiciones')
-        .update({ estado, notas_admin: notas ?? null })
+        .update({ estado, notas_almacen: formattedNotas || null, direccion_despacho, despachado_at: new Date().toISOString() })
         .eq('id', requisicionId)
       if (error) throw error
 
@@ -392,7 +397,7 @@ export function useWarehouseVerdict() {
         requisicion_id: requisicionId,
         estado_anterior: prev?.estado,
         estado_nuevo: estado,
-        comentario: notas ?? 'Veredicto de almacén',
+        comentario: formattedNotas || 'Veredicto de almacén',
       })
     },
     onSuccess: (_, vars) => {

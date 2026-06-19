@@ -64,33 +64,42 @@ function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (form: UsuarioCreateForm) => {
-      if (!supabaseAdmin) {
-        throw new Error('Service Role Key no configurado. Agrega VITE_SUPABASE_SERVICE_ROLE_KEY en el archivo .env')
+      if (supabaseAdmin) {
+        const { data: newAuthUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+          email: form.email,
+          password: form.password,
+          email_confirm: true,
+          user_metadata: { nombre_completo: form.nombre_completo },
+        })
+        if (signUpError) throw signUpError
+        if (!newAuthUser.user) throw new Error('No se pudo crear el usuario')
+
+        const { error: updateError } = await supabase
+          .from('usuarios')
+          .upsert(
+            {
+              id: newAuthUser.user.id,
+              nombre_completo: form.nombre_completo,
+              rol: form.rol,
+              especialidad: form.especialidad || null,
+              whatsapp: form.whatsapp || null,
+            },
+            { onConflict: 'id' }
+          )
+        if (updateError) throw updateError
+
+        return newAuthUser.user
       }
 
-      // Crear usuario en Auth con la clave de admin (sin cambiar la sesión activa)
-      const { data: newAuthUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
-        email: form.email,
-        password: form.password,
-        email_confirm: true, // sin necesidad de confirmar email
-        user_metadata: { nombre_completo: form.nombre_completo },
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string) || 'http://localhost:4000'
+      const resp = await fetch(`${adminApiUrl}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
       })
-      if (signUpError) throw signUpError
-      if (!newAuthUser.user) throw new Error('No se pudo crear el usuario')
-
-      // Actualizar el perfil creado por el trigger de la base de datos
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({
-          nombre_completo: form.nombre_completo,
-          rol: form.rol,
-          especialidad: form.especialidad || null,
-          whatsapp: form.whatsapp || null,
-        })
-        .eq('id', newAuthUser.user.id)
-      if (updateError) throw updateError
-
-      return newAuthUser.user
+      const body = await resp.json()
+      if (!resp.ok) throw new Error(body?.error || 'Error creating user')
+      return body
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Usuario creado exitosamente') },
     onError: (e) => toast.error('Error al crear usuario: ' + (e as Error).message),
@@ -100,12 +109,23 @@ function useCreateUser() {
 function useResetPassword() {
   return useMutation({
     mutationFn: async ({ id, password }: { id: string; password: string }) => {
-      if (!supabaseAdmin) throw new Error('Service Role Key no configurado')
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
-        password,
-        email_confirm: true,
+      if (supabaseAdmin) {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
+          password,
+          email_confirm: true,
+        })
+        if (error) throw error
+        return
+      }
+
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string) || 'http://localhost:4000'
+      const resp = await fetch(`${adminApiUrl}/users/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password }),
       })
-      if (error) throw error
+      const body = await resp.json()
+      if (!resp.ok) throw new Error(body?.error || 'Error al restablecer contraseña')
     },
     onSuccess: () => toast.success('Contraseña actualizada. El usuario ya puede ingresar.'),
     onError: (e) => toast.error('Error: ' + (e as Error).message),

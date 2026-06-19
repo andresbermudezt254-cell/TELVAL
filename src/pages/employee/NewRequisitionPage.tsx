@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,6 +10,7 @@ import {
 import { requisicionSchema, type RequisicionFormData, especialidadOptions, categoriaOptions } from '@/lib/validations'
 import { useCart } from '@/hooks/useCart'
 import { useCreateRequisition } from '@/hooks/useRequisitions'
+import { useUnidadesMedida } from '@/hooks/useUnidadesMedida'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -36,6 +37,27 @@ function useBestSuppliers(productIds: number[]) {
     },
   })
 }
+
+const KNOWN_UNIT_OPTIONS = [
+  { value: 'UN', label: 'Unidad (UN)' },
+  { value: 'PZA', label: 'Pieza (PZA)' },
+  { value: 'MT', label: 'Metro (MT)' },
+  { value: 'M2', label: 'Metro cuadrado (M2)' },
+  { value: 'M3', label: 'Metro cúbico (M3)' },
+  { value: 'KG', label: 'Kilogramo (KG)' },
+  { value: 'G', label: 'Gramo (G)' },
+  { value: 'LT', label: 'Litro (LT)' },
+  { value: 'ML', label: 'Mililitro (ML)' },
+  { value: 'PAR', label: 'Par (PAR)' },
+  { value: 'CJ', label: 'Caja (CJ)' },
+  { value: 'ROL', label: 'Rollo (ROL)' },
+  { value: 'BOL', label: 'Bolsa (BOL)' },
+  { value: 'KIT', label: 'Kit (KIT)' },
+  { value: 'SET', label: 'Set (SET)' },
+  { value: 'GAL', label: 'Galón (GAL)' },
+  { value: 'CM', label: 'Centímetro (CM)' },
+  { value: 'MM', label: 'Milímetro (MM)' },
+]
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 function StepBar({ step }: { step: number }) {
@@ -71,9 +93,27 @@ export default function NewRequisitionPage() {
   const [step, setStep] = useState(1)
   const { items, removeItem, updateCantidad, clearCart, totalEstimado } = useCart()
   const createMutation = useCreateRequisition()
+  const { data: unidades } = useUnidadesMedida()
 
   const productIds = items.map((i) => i.producto.id)
   const { data: bestSuppliers } = useBestSuppliers(productIds)
+  const todayValue = new Date().toISOString().split('T')[0]
+
+  const [selectedUnits, setSelectedUnits] = useState<Record<number, string>>({})
+  const [showSincoEditor, setShowSincoEditor] = useState<Record<number, boolean>>({})
+  const [selectedSinco, setSelectedSinco] = useState<Record<number, string>>({})
+
+  useEffect(() => {
+    setSelectedUnits((current) => {
+      const updated = { ...current }
+      items.forEach((item) => {
+        if (!updated[item.producto.id]) {
+          updated[item.producto.id] = item.producto.unidad_medida
+        }
+      })
+      return updated
+    })
+  }, [items])
 
   const {
     register,
@@ -86,6 +126,16 @@ export default function NewRequisitionPage() {
   })
 
   const categoria = watch('categoria')
+
+  const unitOptions = [
+    ...KNOWN_UNIT_OPTIONS,
+    ...(unidades?.map((u) => ({ value: u.abreviatura, label: `${u.nombre} (${u.abreviatura})` })) ?? []),
+  ].reduce((unique, option) => {
+    if (!unique.some((existing) => existing.value === option.value)) {
+      unique.push(option)
+    }
+    return unique
+  }, [] as Array<{ value: string; label: string }> )
 
   const onSubmit = async (data: RequisicionFormData) => {
     if (items.length === 0) return
@@ -159,9 +209,14 @@ export default function NewRequisitionPage() {
                 </div>
               </div>
 
-              <Input label="Fecha máxima de entrega" type="date" error={errors.fecha_maxima_entrega?.message} {...register('fecha_maxima_entrega')} />
-              <Input label="Item PPTO" placeholder="Ej: 23.22" error={errors.item_ppto?.message} {...register('item_ppto')} />
-              <Input label="Item SINCO-ADPRO" placeholder="Ej: 5.4.1.3" error={errors.item_sinco_adpro?.message} {...register('item_sinco_adpro')} />
+              <Input
+                label="Fecha máxima de entrega"
+                type="date"
+                required
+                min={todayValue}
+                error={errors.fecha_maxima_entrega?.message}
+                {...register('fecha_maxima_entrega')}
+              />
               <div className="sm:col-span-2">
                 <label className="text-sm font-medium text-gray-700 block mb-1">Notas adicionales</label>
                 <textarea
@@ -209,8 +264,47 @@ export default function NewRequisitionPage() {
                           </span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 text-sm">{producto.nombre}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{producto.codigo} · {producto.unidad_medida}</p>
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
+                            <p className="font-semibold text-gray-900 text-sm">{producto.nombre}</p>
+                            {!producto.codigo && (
+                              <button
+                                type="button"
+                                onClick={() => setShowSincoEditor((prev) => ({
+                                  ...prev,
+                                  [producto.id]: !prev[producto.id],
+                                }))}
+                                className="inline-flex items-center gap-1 rounded-full border border-[#1e3a5f] px-3 py-1 text-[11px] font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors"
+                              >
+                                + Agregar código SINCO
+                              </button>
+                            )}
+                          </div>
+
+                          {(producto.codigo || selectedSinco[producto.id]) && (
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                              <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-700">Código SINCO:</span>
+                              <span className="rounded-full bg-slate-50 px-2 py-1 border border-slate-200 text-slate-700">
+                                {selectedSinco[producto.id] ?? producto.codigo}
+                              </span>
+                            </div>
+                          )}
+
+                          {showSincoEditor[producto.id] && (
+                            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                              <label className="block text-xs font-semibold text-slate-700 mb-2">Agregar código SINCO</label>
+                              <input
+                                type="text"
+                                value={selectedSinco[producto.id] ?? ''}
+                                onChange={(event) => setSelectedSinco((prev) => ({
+                                  ...prev,
+                                  [producto.id]: event.target.value,
+                                }))}
+                                placeholder="Ingresa el código SINCO"
+                                className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                              />
+                            </div>
+                          )}
 
                           {best ? (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
@@ -236,8 +330,7 @@ export default function NewRequisitionPage() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <div className="flex flex-col items-end gap-1">
+                        <div className="flex flex-col items-end gap-1">
                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
                               <button type="button" onClick={() => updateCantidad(producto.id, Math.max(1, cantidad - 1))}
                                 className="px-2.5 py-1.5 text-gray-400 hover:bg-gray-100 text-sm font-bold leading-none">−</button>
@@ -260,6 +353,49 @@ export default function NewRequisitionPage() {
                     </div>
                   )
                 })}
+              </div>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-slate-900">Unidad de medida por artículo</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {items.map((item) => (
+                    <div key={item.producto.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{item.producto.nombre}</p>
+                          <p className="text-xs text-gray-500">Cantidad: {item.cantidad}</p>
+                        </div>
+                        <span className="text-[11px] uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-1 rounded-full">{selectedUnits[item.producto.id] || item.producto.unidad_medida}</span>
+                      </div>
+
+                      <div className="grid gap-2">
+                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-widest">Selecciona la unidad</label>
+                        <select
+                          value={selectedUnits[item.producto.id] ?? item.producto.unidad_medida}
+                          onChange={(event) => setSelectedUnits((current) => ({
+                            ...current,
+                            [item.producto.id]: event.target.value,
+                          }))}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                        >
+                          {unitOptions.length > 0 ? (
+                            unitOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))
+                          ) : (
+                            <option value={item.producto.unidad_medida}>{item.producto.unidad_medida}</option>
+                          )}
+                        </select>
+                      </div>
+
+                      <p className="text-xs text-gray-500">
+                        Se va a pedir una unidad de medida <span className="font-semibold text-gray-700">{selectedUnits[item.producto.id] ?? item.producto.unidad_medida}</span> para este artículo.
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Total */}

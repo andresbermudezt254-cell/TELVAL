@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useProductsWithPrices, useCategorias, useProductById } from '@/hooks/useProducts'
 import { usePricesForProduct } from '@/hooks/useProducts'
 import { useSuppliers, useUpsertPrice } from '@/hooks/useSuppliers'
+import { useUnidadesMedida } from '@/hooks/useUnidadesMedida'
 import { productoSchema, type ProductoFormData } from '@/lib/validations'
 import { supabase } from '@/lib/supabase'
 import { Modal } from '@/components/ui/Modal'
@@ -52,6 +53,7 @@ function ProductModal({ open, onClose, productId }: { open: boolean; onClose: ()
   const { data: product } = useProductById(productId)
   const { data: suppliers } = useSuppliers()
   const { data: existingPrices } = usePricesForProduct(productId ?? 0)
+  const { data: unidades } = useUnidadesMedida()
   const qc = useQueryClient()
   const upsertPrice = useUpsertPrice()
 
@@ -138,7 +140,23 @@ function ProductModal({ open, onClose, productId }: { open: boolean; onClose: ()
       <form id="product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Input label="Código" required error={errors.codigo?.message} {...register('codigo')} />
-          <Input label="Unidad de medida" placeholder="UND, M, KG..." required error={errors.unidad_medida?.message} {...register('unidad_medida')} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Unidad de medida</label>
+            <input
+              list="unidad-medida-list"
+              placeholder="UND, M, KG, 1/4 pintura..."
+              {...register('unidad_medida')}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+            />
+            <datalist id="unidad-medida-list">
+              {(unidades ?? []).map((u) => (
+                <option key={u.id} value={u.abreviatura}>{u.nombre}</option>
+              ))}
+            </datalist>
+            {errors.unidad_medida?.message && (
+              <p className="text-xs text-red-500 mt-1">{errors.unidad_medida?.message}</p>
+            )}
+          </div>
         </div>
         <Input label="Nombre" required error={errors.nombre?.message} {...register('nombre')} />
         <Input label="Descripción" error={errors.descripcion?.message} {...register('descripcion')} />
@@ -227,6 +245,7 @@ export default function ProductsPage() {
 
   const { data: products, isLoading } = useProductsWithPrices(search, categoriaId)
   const { data: categorias } = useCategorias()
+  const { data: unidades } = useUnidadesMedida()
 
   const openEdit = (id?: number) => { setEditId(id); setModalOpen(true) }
   const closeModal = () => { setModalOpen(false); setEditId(undefined) }

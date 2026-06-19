@@ -1,8 +1,8 @@
 ﻿import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Copy, Check, MessageCircle, Clock, CheckCircle2, ShoppingCart, PackageCheck, XCircle, RotateCcw, Truck, ChevronDown } from 'lucide-react'
-import { useRequisitionById, useUpdateRequisitionStatus, useMarcarItemCompletado, useUpdateProveedorFinal } from '@/hooks/useRequisitions'
-import { useSuppliers } from '@/hooks/useSuppliers'
+import { useRequisitionById, useUpdateRequisitionStatus, useMarcarItemCompletado, useUpdateProveedorFinal, useWarehouseVerdict } from '@/hooks/useRequisitions'
+import { useSuppliers, useSuppliersByProducts } from '@/hooks/useSuppliers'
 import { usePriceModal } from '@/components/suppliers/PriceCompareModal'
 import { PriceCompareModal } from '@/components/suppliers/PriceCompareModal'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
@@ -64,20 +64,38 @@ function WorkflowBar({ estado }: { estado: EstadoRequisicion }) {
 export default function RequisitionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data: req, isLoading } = useRequisitionById(Number(id))
+  const { data: req, isLoading, error } = useRequisitionById(Number(id))
   const updateStatus = useUpdateRequisitionStatus()
   const marcarItem = useMarcarItemCompletado()
   const updateProveedor = useUpdateProveedorFinal()
+  const warehouseVerdict = useWarehouseVerdict()
   const { data: proveedores } = useSuppliers()
+  const productIds = req?.detalles?.map((d) => d.producto_id) ?? []
+  const { data: proveedoresConTodosLosProductos } = useSuppliersByProducts(productIds)
   const priceModal = usePriceModal()
   const [copied, setCopied] = useState(false)
   const [comentario, setComentario] = useState('')
   const [confirmAction, setConfirmAction] = useState<'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA' | null>(null)
   const [proveedorFinalId, setProveedorFinalId] = useState<string>('')
   const [showProveedorEditor, setShowProveedorEditor] = useState(false)
+  const [warehouseModalOpen, setWarehouseModalOpen] = useState(false)
+  const [warehouseState, setWarehouseState] = useState<'PARCIAL' | 'COMPLETADA'>('COMPLETADA')
+  const [warehouseNote, setWarehouseNote] = useState('')
+  const [warehouseDirection, setWarehouseDirection] = useState('')
+  const [warehouseDispatchCount, setWarehouseDispatchCount] = useState<number>(0)
 
   if (isLoading) return <PageLoader />
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto py-20 text-center text-gray-600">
+        <p className="text-lg font-semibold text-gray-900">No se pudo cargar la requisición</p>
+        <p className="mt-2 text-sm text-gray-500">{(error as Error).message || 'Hubo un problema al obtener los datos.'}</p>
+      </div>
+    )
+  }
   if (!req) return <div className="text-center py-20 text-gray-500">Requisición no encontrada.</div>
+
+  const availableProviders = ((proveedoresConTodosLosProductos?.length ?? 0) > 0 ? proveedoresConTodosLosProductos : proveedores ?? []) as any[]
 
   const handleCopyWhatsApp = async () => {
     const msg = generarResumenWhatsApp(req, req.detalles ?? [])
@@ -143,8 +161,7 @@ export default function RequisitionDetailPage() {
             ['Punto', req.punto],
             ['Aviso', req.numero_aviso],
             ['Fecha máx. entrega', req.fecha_maxima_entrega ? formatDate(req.fecha_maxima_entrega) : '—'],
-            ['Item PPTO', req.item_ppto ?? '—'],
-            ['Item SINCO-ADPRO', req.item_sinco_adpro ?? '—'],
+            ['Artículos SINCO-ADPRO', req.item_sinco_adpro ? req.item_sinco_adpro : '—'],
           ].map(([label, value]) => (
             <div key={label as string} className="flex justify-between items-baseline gap-2 text-sm">
               <span className="text-gray-400 text-xs shrink-0">{label}</span>
@@ -262,9 +279,11 @@ export default function RequisitionDetailPage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
                 >
                   <option value="">— Sin proveedor —</option>
-                  {(proveedores ?? []).filter((p: any) => p.activo).map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
-                  ))}
+                  {availableProviders
+                    .filter((p) => p.activo)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>{p.nombre}</option>
+                    ))}
                 </select>
                 <button
                   disabled={updateProveedor.isPending}
@@ -278,6 +297,44 @@ export default function RequisitionDetailPage() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Almacén</p>
+            <p className="text-sm text-gray-500">Envía esta requisición a almacén y registra si llegó completa o parcial.</p>
+          </div>
+          {req.estado === 'EN_COMPRA' && (
+            <button
+              type="button"
+              onClick={() => setWarehouseModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-[#1e3a5f] px-4 py-2 text-xs font-semibold text-white hover:bg-[#162d4a] transition-colors"
+            >
+              <CheckCircle2 size={14} /> Enviar a almacén
+            </button>
+          )}
+          {req.estado === 'PARCIAL' && (
+            <span className="px-3 py-2 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Entrega parcial registrada</span>
+          )}
+          {req.estado === 'COMPLETADA' && (
+            <span className="px-3 py-2 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Despacho completo registrado</span>
+          )}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">Estado de almacén</p>
+            <p className="text-sm text-gray-700">{req.estado === 'EN_COMPRA' ? 'Pendiente de veredicto' : req.estado === 'PARCIAL' ? 'Llegada parcial' : req.estado === 'COMPLETADA' ? 'Despacho completo' : 'Sin veredicto'}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">Dirección de despacho</p>
+            <p className="text-sm text-gray-700">{req.direccion_despacho ? req.direccion_despacho : 'Aún no hay dirección registrada.'}</p>
+          </div>
+          <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">Nota de almacén</p>
+            <p className="text-sm text-gray-700">{req.notas_almacen ? req.notas_almacen : 'Aún no hay nota registrada.'}</p>
           </div>
         </div>
       </div>
@@ -306,7 +363,7 @@ export default function RequisitionDetailPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b">
-              {['#', 'Código', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'P. Unitario', 'Total', 'Recibido', ''].map((h) => (
+              {['#', 'Código SINCO', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'P. Unitario', 'Total', 'Recibido', ''].map((h) => (
                 <th key={h} className="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
                   {h}
                 </th>
@@ -317,9 +374,14 @@ export default function RequisitionDetailPage() {
             {(req.detalles ?? []).map((d, idx) => (
               <tr key={d.id} className={`border-t transition-colors ${d.completado ? 'bg-emerald-50/50' : 'hover:bg-gray-50/50'}`}>
                 <td className="px-4 py-3 text-xs font-mono text-gray-400">{d.numero_item ?? idx + 1}</td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-400">{d.producto?.codigo}</td>
-                <td className={`px-4 py-3 font-medium ${d.completado ? 'line-through text-gray-400' : 'text-gray-800'}`}>{d.producto?.nombre}</td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{d.producto?.unidad_medida}</td>
+                <td className="px-4 py-3 font-mono text-xs text-gray-400">{d.producto?.codigo ?? '—'}</td>
+                <td className={`px-4 py-3 ${d.completado ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium">{d.producto?.nombre}</span>
+                    <span className="text-[11px] text-gray-500">Unidad: {d.producto?.unidad_medida ?? 'UND'}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-gray-400 text-xs">{d.producto?.unidad_medida ?? 'UND'}</td>
                 <td className="px-4 py-3 font-bold text-center text-gray-700">{d.cantidad}</td>
                 <td className="px-4 py-3">
                   {d.proveedor_sugerido ? (
@@ -328,8 +390,8 @@ export default function RequisitionDetailPage() {
                     <span className="text-gray-300 italic text-xs">Sin proveedor</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-gray-700"><CurrencyCOP value={(d as any).precio_unitario_sugerido} /></td>
-                <td className="px-4 py-3 font-semibold text-gray-900"><CurrencyCOP value={((d as any).precio_unitario_sugerido ?? 0) * d.cantidad} /></td>
+                <td className="px-4 py-3 text-gray-700"><CurrencyCOP value={d.precio_unitario} /></td>
+                <td className="px-4 py-3 font-semibold text-gray-900"><CurrencyCOP value={(d.precio_unitario ?? 0) * d.cantidad} /></td>
                 <td className="px-4 py-3">
                   {d.completado ? (
                     <div className="flex items-center gap-1.5">
@@ -415,6 +477,64 @@ export default function RequisitionDetailPage() {
       <PriceCompareModal
         producto={priceModal.producto}
         onClose={priceModal.closeModal}
+      />
+      <ConfirmDialog
+        open={warehouseModalOpen}
+        title="Enviar a almacén"
+        message={
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">Registra si el pedido llegó completo o si sólo parte de los productos fue recibido.</p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={`flex flex-col gap-2 rounded-xl border p-4 text-sm cursor-pointer ${warehouseState === 'COMPLETADA' ? 'border-[#1e3a5f] bg-[#eff6ff]' : 'border-gray-200 bg-white'}`}>
+                <div className="font-semibold">Pedido completo</div>
+                <div className="text-xs text-gray-500">Todos los productos llegaron.</div>
+                <input
+                  type="radio"
+                  name="warehouseState"
+                  value="COMPLETADA"
+                  checked={warehouseState === 'COMPLETADA'}
+                  onChange={() => setWarehouseState('COMPLETADA')}
+                  className="sr-only"
+                />
+              </label>
+              <label className={`flex flex-col gap-2 rounded-xl border p-4 text-sm cursor-pointer ${warehouseState === 'PARCIAL' ? 'border-[#1e3a5f] bg-[#eff6ff]' : 'border-gray-200 bg-white'}`}>
+                <div className="font-semibold">Entrega parcial</div>
+                <div className="text-xs text-gray-500">Sólo algunos productos llegaron.</div>
+                <input
+                  type="radio"
+                  name="warehouseState"
+                  value="PARCIAL"
+                  checked={warehouseState === 'PARCIAL'}
+                  onChange={() => setWarehouseState('PARCIAL')}
+                  className="sr-only"
+                />
+              </label>
+            </div>
+            <textarea
+              rows={4}
+              value={warehouseNote}
+              onChange={(e) => setWarehouseNote(e.target.value)}
+              placeholder="Nota de almacén... Ej: llegaron 3 de 5 productos"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+            />
+          </div>
+        }
+        confirmLabel="Registrar en almacén"
+        onClose={() => setWarehouseModalOpen(false)}
+        onConfirm={async () => {
+          if (!warehouseDirection.trim() || warehouseDispatchCount <= 0) return
+          await warehouseVerdict.mutateAsync({
+            requisicionId: req.id,
+            estado: warehouseState,
+            notas: warehouseNote,
+            direccion_despacho: warehouseDirection,
+            cantidad_despachada: warehouseDispatchCount,
+          })
+          setWarehouseModalOpen(false)
+        }}
+        variant="primary"
+        loading={warehouseVerdict.isPending}
+        confirmDisabled={!warehouseDirection.trim() || warehouseDispatchCount <= 0}
       />
     </div>
   )

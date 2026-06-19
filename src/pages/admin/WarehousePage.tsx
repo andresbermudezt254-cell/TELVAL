@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Truck, PackageCheck, Clock3, CheckCircle2 } from 'lucide-react'
 import { useRequisitions, useRequisitionById, useMarcarItemCompletado } from '@/hooks/useRequisitions'
+import type { Requisicion } from '@/types'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
@@ -16,7 +17,7 @@ function progreso(detalles: Array<{ completado: boolean }> | undefined) {
 export default function WarehousePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const { data: requisitionsResponse, isLoading } = useRequisitions({ estado: ['EN_COMPRA', 'PARCIAL'] })
-  const requisitions = requisitionsResponse?.data ?? []
+  const requisitions = (requisitionsResponse?.data ?? []) as Requisicion[]
 
   const selected = selectedId ? requisitions.find((r) => r.id === selectedId) : null
   const { data: reqDetail, isLoading: isDetailLoading } = useRequisitionById(selected?.id)

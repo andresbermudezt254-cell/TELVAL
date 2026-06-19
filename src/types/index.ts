@@ -135,6 +135,8 @@ export interface Requisicion {
   item_sinco_adpro?: string
   notas_empleado?: string
   notas_admin?: string
+  notas_almacen?: string
+  direccion_despacho?: string
   motivo_rechazo?: string
   observaciones?: string
   total_estimado: number

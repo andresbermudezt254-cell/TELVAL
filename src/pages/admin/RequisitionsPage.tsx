@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { Clock, CheckCircle2, ShoppingCart, XCircle, ChevronRight, RotateCcw, PackageCheck, Plus } from 'lucide-react'
 import { useRequisitions, useUpdateRequisitionStatus } from '@/hooks/useRequisitions'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
+import type { Requisicion } from '@/types'
 import { CategoryBadge } from '@/components/requisitions/CategoryBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
@@ -14,10 +17,12 @@ import type { EstadoRequisicion } from '@/types'
 
 const ESTADO_CONFIG: Record<EstadoRequisicion | 'all', { label: string; icon?: React.ReactNode; color: string }> = {
   all:        { label: 'Todas',        color: '' },
+  BORRADOR:   { label: 'Borrador',     icon: <Clock size={11} />,         color: 'text-slate-500' },
   PENDIENTE:  { label: 'Pendientes',   icon: <Clock size={11} />,         color: 'text-amber-600' },
   EN_REVISION:{ label: 'En revisión',  icon: <RotateCcw size={11} />,     color: 'text-blue-600' },
   APROBADA:   { label: 'Aprobadas',    icon: <CheckCircle2 size={11} />,  color: 'text-green-600' },
   EN_COMPRA:  { label: 'En compra',    icon: <ShoppingCart size={11} />,  color: 'text-purple-600' },
+  PARCIAL:    { label: 'Parcial',      icon: <RotateCcw size={11} />,     color: 'text-indigo-600' },
   COMPLETADA: { label: 'Completadas',  icon: <PackageCheck size={11} />,  color: 'text-slate-600' },
   RECHAZADA:  { label: 'Rechazadas',   icon: <XCircle size={11} />,       color: 'text-red-600' },
 }
@@ -26,17 +31,31 @@ const ESTADOS = Object.keys(ESTADO_CONFIG) as Array<EstadoRequisicion | 'all'>
 
 export default function RequisitionsPage() {
   const navigate = useNavigate()
+  const [empleadoFilter, setEmpleadoFilter] = useState<string | undefined>()
   const [estadoFilter, setEstadoFilter] = useState<EstadoRequisicion | undefined>()
   const [page, setPage] = useState(0)
   const [confirmAction, setConfirmAction] = useState<{
-    id: number; codigo: string; action: 'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA'
+    id: number; codigo: string; action: 'APROBADA' | 'RECHAZADA' | 'EN_COMPRA'
   } | null>(null)
   const [comentario, setComentario] = useState('')
 
-  const { data: result, isLoading } = useRequisitions({ estado: estadoFilter, page })
-  const requisitions = result?.data ?? []
+  const { data: employees } = useQuery({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('usuarios').select('id, nombre_completo').eq('rol', 'empleado').eq('activo', true).order('nombre_completo')
+      if (error) throw error
+      return data as { id: string; nombre_completo: string }[]
+    },
+  })
+
+  const { data: result, isLoading, error } = useRequisitions({ estado: estadoFilter, page, empleadoId: empleadoFilter })
+  const requisitions = (result?.data ?? []) as Requisicion[]
   const total = result?.count ?? 0
   const updateStatus = useUpdateRequisitionStatus()
+
+  if (error) {
+    console.error('Error cargando requisiciones admin:', error)
+  }
 
   const handleConfirm = async () => {
     if (!confirmAction) return
@@ -75,6 +94,20 @@ export default function RequisitionsPage() {
 
       {/* Filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* Employee selector (admin) */}
+        {employees && employees.length > 0 && (
+          <select
+            value={empleadoFilter ?? ''}
+            onChange={(e) => { setEmpleadoFilter(e.target.value || undefined); setPage(0) }}
+            className="text-sm rounded-full border px-3 py-1.5 bg-white"
+          >
+            <option value="">— Todos los empleados —</option>
+            {employees.map((u) => (
+              <option key={u.id} value={u.id}>{u.nombre_completo}</option>
+            ))}
+          </select>
+        )}
+
         {ESTADOS.map((e) => {
           const cfg = ESTADO_CONFIG[e]
           const isActive = (e === 'all' && !estadoFilter) || estadoFilter === e
@@ -95,6 +128,11 @@ export default function RequisitionsPage() {
         })}
       </div>
 
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Error cargando requisiciones: {error.message}
+        </div>
+      )}
       {isLoading ? (
         <PageLoader />
       ) : !requisitions.length ? (
@@ -154,14 +192,6 @@ export default function RequisitionsPage() {
                             className="text-xs px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 font-semibold transition-colors"
                           >
                             En compra
-                          </button>
-                        )}
-                        {req.estado === 'EN_COMPRA' && (
-                          <button
-                            onClick={() => setConfirmAction({ id: req.id, codigo: req.codigo, action: 'COMPLETADA' })}
-                            className="text-xs px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-semibold transition-colors"
-                          >
-                            Completar
                           </button>
                         )}
                       </div>

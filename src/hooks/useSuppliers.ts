@@ -54,6 +54,32 @@ export function useSupplierProducts(proveedorId?: number) {
   })
 }
 
+export function useSuppliersByProducts(productIds: number[]) {
+  return useQuery({
+    queryKey: ['suppliers-by-products', productIds],
+    enabled: productIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('proveedor_producto')
+        .select('proveedor_id, producto_id, proveedor:proveedores(id, nombre, whatsapp, activo)')
+        .in('producto_id', productIds)
+        .eq('activo', true)
+      if (error) throw error
+      const productSet = new Set(productIds)
+      const supplierMap = new Map<number, { proveedor: any; productos: Set<number> }>()
+      data?.forEach((row: any) => {
+        if (!row.proveedor || !row.proveedor.activo) return
+        const existing = supplierMap.get(row.proveedor_id) ?? { proveedor: row.proveedor, productos: new Set<number>() }
+        existing.productos.add(row.producto_id)
+        supplierMap.set(row.proveedor_id, existing)
+      })
+      return Array.from(supplierMap.values())
+        .filter((entry) => productIds.every((id) => entry.productos.has(id)))
+        .map((entry) => entry.proveedor)
+    },
+  })
+}
+
 export function useProductCountsBySupplier() {
   return useQuery({
     queryKey: ['product-counts-by-supplier'],

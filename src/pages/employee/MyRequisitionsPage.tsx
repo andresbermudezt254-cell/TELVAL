@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRequisitions, useRequisitionById } from '@/hooks/useRequisitions'
+import type { Requisicion } from '@/types'
 import { Modal } from '@/components/ui/Modal'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
 import { CategoryBadge } from '@/components/requisitions/CategoryBadge'
@@ -22,44 +23,86 @@ const ESTADOS: { label: string; value: EstadoRequisicion | 'all' }[] = [
 ]
 
 function DetailModal({ id, open, onClose }: { id: number; open: boolean; onClose: () => void }) {
-  const { data: req, isLoading } = useRequisitionById(id)
-  const r = req as any
+  const { data: req, isLoading, error } = useRequisitionById(id)
+
   if (!open) return null
+
   return (
-    <Modal open={open} onClose={onClose} title={r ? `Requisición ${r.codigo}` : 'Cargando...'} size="lg">
-      {isLoading || !r ? (
+    <Modal open={open} onClose={onClose} title={req ? `Requisición ${req.codigo}` : 'Detalles de requisición'} size="lg">
+      {isLoading ? (
         <PageLoader />
+      ) : error ? (
+        <div className="p-6 text-sm text-red-700">
+          <p className="font-semibold">No se pudo cargar la requisición.</p>
+          <p className="mt-2">{error.message || 'Ocurrió un error al obtener los detalles.'}</p>
+        </div>
+      ) : !req ? (
+        <div className="p-6 text-sm text-gray-600">Requisición no encontrada.</div>
       ) : (
         <div className="space-y-5">
           <div className="flex flex-wrap gap-4 text-sm">
-            <div><span className="text-gray-500">Punto:</span> <strong>{r.punto}</strong></div>
-            <div><span className="text-gray-500">Aviso:</span> <strong>{r.numero_aviso}</strong></div>
-            <div><span className="text-gray-500">Especialidad:</span> <strong>{r.especialidad}</strong></div>
-            <div><span className="text-gray-500">Categoría:</span> <CategoryBadge categoria={r.categoria} /></div>
-            {r.fecha_maxima_entrega && (
-              <div><span className="text-gray-500">Fecha máx.:</span> <strong>{formatDate(r.fecha_maxima_entrega)}</strong></div>
+            <div><span className="text-gray-500">Punto:</span> <strong>{req.punto}</strong></div>
+            <div><span className="text-gray-500">Aviso:</span> <strong>{req.numero_aviso}</strong></div>
+            <div><span className="text-gray-500">Especialidad:</span> <strong>{req.especialidad}</strong></div>
+            <div><span className="text-gray-500">Categoría:</span> <CategoryBadge categoria={req.categoria} /></div>
+            {req.fecha_maxima_entrega && (
+              <div><span className="text-gray-500">Fecha máx.:</span> <strong>{formatDate(req.fecha_maxima_entrega)}</strong></div>
             )}
-            <div><span className="text-gray-500">Total estimado:</span> <strong><CurrencyCOP value={r.total_estimado} /></strong></div>
+            <div><span className="text-gray-500">Total estimado:</span> <strong><CurrencyCOP value={req.total_estimado} /></strong></div>
           </div>
 
-          {r.notas_empleado && (
+          {req.notas_empleado && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
               <p className="font-medium text-yellow-800 mb-1">Notas</p>
-              <p className="text-yellow-700">{r.notas_empleado}</p>
+              <p className="text-yellow-700">{req.notas_empleado}</p>
             </div>
           )}
 
-          {r.motivo_rechazo && (
+          {req.motivo_rechazo && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
               <p className="font-medium text-red-800 mb-1">Motivo de rechazo</p>
-              <p className="text-red-700">{r.motivo_rechazo}</p>
+              <p className="text-red-700">{req.motivo_rechazo}</p>
             </div>
           )}
 
-          {r.historial && r.historial.length > 0 && (
+          <div>
+            <p className="text-sm font-semibold text-gray-700 mb-3">Productos solicitados</p>
+            {req.detalles && req.detalles.length > 0 ? (
+              <div className="overflow-x-auto rounded-xl border border-gray-100">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">#</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Código SINCO</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Producto</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Cant.</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">UM</th>
+                      <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-gray-500">Proveedor sugerido</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {req.detalles.map((item, index) => (
+                      <tr key={item.id}>
+                        <td className="px-3 py-2 text-xs text-gray-500">{item.numero_item ?? index + 1}</td>
+                        <td className="px-3 py-2 text-xs font-mono text-gray-500">{item.producto?.codigo ?? '—'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{item.producto?.nombre ?? 'Sin producto'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{item.cantidad}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{item.producto?.unidad_medida ?? 'UND'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{item.proveedor_sugerido?.nombre ?? 'Sin proveedor'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No hay productos asociados a esta requisición.</p>
+            )}
+          </div>
+
+          {req.historial && req.historial.length > 0 && (
             <div>
               <p className="text-sm font-semibold text-gray-700 mb-3">Historial</p>
-              <Timeline historial={r.historial} />
+              <Timeline historial={req.historial} />
             </div>
           )}
         </div>
@@ -69,10 +112,10 @@ function DetailModal({ id, open, onClose }: { id: number; open: boolean; onClose
 }
 
 export default function MyRequisitionsPage() {
-  const [estadoFilter, setEstadoFilter] = useState<EstadoRequisicion | undefined>()
+  const [estadoFilter, setEstadoFilter] = useState<EstadoRequisicion | undefined>(undefined)
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const { data: result, isLoading } = useRequisitions({ estado: estadoFilter })
-  const requisiciones = result?.data ?? []
+  const { data: result, isLoading, isError, error } = useRequisitions({ estado: estadoFilter })
+  const requisiciones = (result?.data ?? []) as Requisicion[]
 
   return (
     <div className="space-y-4">
@@ -95,8 +138,19 @@ export default function MyRequisitionsPage() {
 
       {isLoading ? (
         <PageLoader />
-      ) : !requisiciones.length ? (
+      ) : isError ? (
+        <div className="bg-white rounded-xl border border-red-200 p-6 text-red-600 text-sm">
+          <p className="font-semibold">No se pudieron cargar las requisiciones.</p>
+          <p className="mt-2">{error?.message ?? 'Ocurrió un error al consultar tus requisiciones.'}</p>
+        </div>
+      ) : result?.count === 0 ? (
         <EmptyState title="Sin requisiciones" description="Aún no has creado requisiciones." />
+      ) : !requisiciones.length ? (
+        <div className="bg-white rounded-xl border border-red-200 p-6 text-red-600 text-sm">
+          <p className="font-semibold">No se encontraron requisiciones para tu cuenta.</p>
+          <p className="mt-2">Esto puede ocurrir si tu sesión no cargó el usuario correctamente o si hay un filtro activo.</p>
+          <p className="mt-2 text-xs text-gray-500">Si ya enviaste una requisición, recarga la página o cierra sesión e ingresa nuevamente.</p>
+        </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">

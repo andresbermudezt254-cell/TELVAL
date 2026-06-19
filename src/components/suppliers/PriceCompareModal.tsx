@@ -40,7 +40,7 @@ export function PriceCompareModal({ producto, onClose }: PriceCompareModalProps)
             </thead>
             <tbody className="divide-y">
               {precios.map((p) => {
-                const isBest = p.ranking_precio === 1
+                const isBest = p.ranking === 1
                 return (
                   <tr
                     key={p.proveedor_id}
@@ -57,13 +57,13 @@ export function PriceCompareModal({ producto, onClose }: PriceCompareModalProps)
                       {p.proveedor_nombre}
                     </td>
                     <td className={`px-3 py-2 text-right font-semibold ${isBest ? 'text-green-700' : ''}`}>
-                      {formatCOP(p.precio)}
+                      {formatCOP(p.precio_unitario)}
                     </td>
                     <td className="px-3 py-2 text-right text-gray-500">
                       {isBest ? (
                         <span className="text-green-600 font-medium">Mejor precio</span>
                       ) : (
-                        <span className="text-red-500">+{p.porcentaje_sobre_minimo}%</span>
+                        <span className="text-red-500">+{p.pct_sobre_minimo}%</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-gray-500">{formatDate(p.fecha_precio)}</td>

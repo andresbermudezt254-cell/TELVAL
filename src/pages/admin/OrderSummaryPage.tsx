@@ -260,6 +260,7 @@ export default function OrderSummaryPage() {
                           <th className="w-8 px-3 py-2.5" />
                           <th className="text-left px-3 py-2.5 font-semibold">Producto</th>
                           <th className="text-left px-2 py-2.5 font-semibold">Requisicion</th>
+                          <th className="text-left px-2 py-2.5 font-semibold">Artículos SINCO-ADPRO</th>
                           <th className="text-left px-2 py-2.5 font-semibold">Prioridad</th>
                           <th className="text-left px-2 py-2.5 font-semibold">Estado</th>
                           <th className="text-center px-2 py-2.5 font-semibold">Cantidad</th>
@@ -318,6 +319,14 @@ export default function OrderSummaryPage() {
                               </td>
 
                               <td className="px-2 py-3">
+                                {row.requisicion?.item_sinco_adpro ? (
+                                  <div className="whitespace-pre-line text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-1 rounded-md">{row.requisicion.item_sinco_adpro}</div>
+                                ) : (
+                                  <span className="text-gray-300 text-[10px]">-</span>
+                                )}
+                              </td>
+
+                              <td className="px-2 py-3">
                                 <span className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${urg.badge} ${cat === 'URGENTE' && !marcado ? 'animate-pulse' : ''}`}>
                                   <UrgIcon size={8} />{urg.label}
                                 </span>
@@ -353,7 +362,7 @@ export default function OrderSummaryPage() {
                       {subtotal > 0 && (
                         <tfoot>
                           <tr className="border-t-2 border-[#1e3a5f]/10 bg-[#1e3a5f]/5">
-                            <td colSpan={6} className="px-3 py-2.5 text-right text-xs font-bold text-[#1e3a5f] uppercase tracking-wide">
+                            <td colSpan={7} className="px-3 py-2.5 text-right text-xs font-bold text-[#1e3a5f] uppercase tracking-wide">
                               Total pedido a{isSin ? ' este grupo' : (' ' + proveedor.nombre)}
                             </td>
                             <td className="px-3 py-2.5 text-right text-sm font-black text-[#1e3a5f]">{formatCOP(subtotal)}</td>
