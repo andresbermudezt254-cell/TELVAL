@@ -356,7 +356,7 @@ export default function NewRequisitionPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-5xl mx-auto px-4 space-y-5">
       <StepBar step={step} />
 
       <form onSubmit={handleSubmit(onSubmit)}>
