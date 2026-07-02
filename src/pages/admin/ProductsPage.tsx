@@ -6,6 +6,7 @@ import { useProductsWithPrices, useCategorias, useProductById } from '@/hooks/us
 import { usePricesForProduct } from '@/hooks/useProducts'
 import { useSuppliers, useUpsertPrice } from '@/hooks/useSuppliers'
 import { useUnidadesMedida } from '@/hooks/useUnidadesMedida'
+import { unidadMedidaLabel } from '@/lib/utils'
 import { productoSchema, type ProductoFormData } from '@/lib/validations'
 import { supabase } from '@/lib/supabase'
 import { Modal } from '@/components/ui/Modal'
@@ -289,7 +290,7 @@ export default function ProductsPage() {
                   <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.codigo}</td>
                   <td className="px-4 py-3 font-medium">{p.nombre}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">{p.categoria?.icono} {p.categoria?.nombre}</td>
-                  <td className="px-4 py-3">{p.unidad_medida}</td>
+                  <td className="px-4 py-3">{unidadMedidaLabel(p.unidad_medida)}</td>
                   <td className="px-4 py-3 font-semibold text-green-700">
                     {(p as any).precio_minimo
                       ? <CurrencyCOP value={(p as any).precio_minimo} />

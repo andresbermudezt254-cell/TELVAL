@@ -10,14 +10,15 @@ import {
 import { requisicionSchema, type RequisicionFormData, especialidadOptions, categoriaOptions } from '@/lib/validations'
 import { useCart } from '@/hooks/useCart'
 import { useCreateRequisition } from '@/hooks/useRequisitions'
-import { useUnidadesMedida } from '@/hooks/useUnidadesMedida'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
-import { formatCOP, buildWhatsAppUrl } from '@/lib/utils'
+import { Modal } from '@/components/ui/Modal'
+import { formatCOP, buildWhatsAppUrl, unidadMedidaLabel } from '@/lib/utils'
+import type { Producto } from '@/types'
 
 // ─── Best supplier per product ───────────────────────────────────────────────
 function useBestSuppliers(productIds: number[]) {
@@ -38,26 +39,220 @@ function useBestSuppliers(productIds: number[]) {
   })
 }
 
-const KNOWN_UNIT_OPTIONS = [
-  { value: 'UN', label: 'Unidad (UN)' },
-  { value: 'PZA', label: 'Pieza (PZA)' },
-  { value: 'MT', label: 'Metro (MT)' },
-  { value: 'M2', label: 'Metro cuadrado (M2)' },
-  { value: 'M3', label: 'Metro cúbico (M3)' },
-  { value: 'KG', label: 'Kilogramo (KG)' },
-  { value: 'G', label: 'Gramo (G)' },
-  { value: 'LT', label: 'Litro (LT)' },
-  { value: 'ML', label: 'Mililitro (ML)' },
-  { value: 'PAR', label: 'Par (PAR)' },
-  { value: 'CJ', label: 'Caja (CJ)' },
-  { value: 'ROL', label: 'Rollo (ROL)' },
-  { value: 'BOL', label: 'Bolsa (BOL)' },
-  { value: 'KIT', label: 'Kit (KIT)' },
-  { value: 'SET', label: 'Set (SET)' },
-  { value: 'GAL', label: 'Galón (GAL)' },
-  { value: 'CM', label: 'Centímetro (CM)' },
-  { value: 'MM', label: 'Milímetro (MM)' },
+interface UnitOption {
+  value: string
+  label: string
+}
+
+interface UnitGroup {
+  label: string
+  options: UnitOption[]
+}
+
+const UNIT_GROUPS: UnitGroup[] = [
+  {
+    label: 'Fracciones',
+    options: [
+      { value: '1/2', label: '1/2 — Medio' },
+      { value: '1/3', label: '1/3 — Un tercio' },
+      { value: '1/4', label: '1/4 — Un cuarto' },
+      { value: '1/5', label: '1/5 — Un quinto' },
+      { value: '1/6', label: '1/6 — Un sexto' },
+      { value: '1/8', label: '1/8 — Un octavo' },
+      { value: '3/4', label: '3/4 — Tres cuartos' },
+      { value: '5/8', label: '5/8 — Cinco octavos' },
+      { value: '7/8', label: '7/8 — Siete octavos' },
+    ],
+  },
+  {
+    label: 'Longitud',
+    options: [
+      { value: 'mm', label: 'mm — Milímetro' },
+      { value: 'cm', label: 'cm — Centímetro' },
+      { value: 'dm', label: 'dm — Decímetro' },
+      { value: 'm', label: 'm — Metro' },
+      { value: 'dam', label: 'dam — Decámetro' },
+      { value: 'hm', label: 'hm — Hectómetro' },
+      { value: 'km', label: 'km — Kilómetro' },
+      { value: 'in', label: 'in — Pulgada' },
+      { value: 'ft', label: 'ft — Pie' },
+      { value: 'yd', label: 'yd — Yarda' },
+      { value: 'mi', label: 'mi — Milla' },
+    ],
+  },
+  {
+    label: 'Área (Superficie)',
+    options: [
+      { value: 'mm²', label: 'mm² — Milímetro cuadrado' },
+      { value: 'cm²', label: 'cm² — Centímetro cuadrado' },
+      { value: 'dm²', label: 'dm² — Decímetro cuadrado' },
+      { value: 'm²', label: 'm² — Metro cuadrado' },
+      { value: 'dam²', label: 'dam² — Decámetro cuadrado' },
+      { value: 'hm²', label: 'hm² — Hectómetro cuadrado' },
+      { value: 'km²', label: 'km² — Kilómetro cuadrado' },
+      { value: 'ha', label: 'ha — Hectárea' },
+    ],
+  },
+  {
+    label: 'Volumen',
+    options: [
+      { value: 'mm³', label: 'mm³ — Milímetro cúbico' },
+      { value: 'cm³', label: 'cm³ — Centímetro cúbico' },
+      { value: 'dm³', label: 'dm³ — Decímetro cúbico' },
+      { value: 'm³', label: 'm³ — Metro cúbico' },
+      { value: 'km³', label: 'km³ — Kilómetro cúbico' },
+    ],
+  },
+  {
+    label: 'Capacidad',
+    options: [
+      { value: 'mL', label: 'mL — Mililitro' },
+      { value: 'cL', label: 'cL — Centilitro' },
+      { value: 'dL', label: 'dL — Decilitro' },
+      { value: 'L', label: 'L — Litro' },
+      { value: 'daL', label: 'daL — Decalitro' },
+      { value: 'hL', label: 'hL — Hectolitro' },
+      { value: 'kL', label: 'kL — Kilolitro' },
+      { value: 'GL', label: 'GL — Galón' },
+    ],
+  },
+  {
+    label: 'Masa o Peso',
+    options: [
+      { value: 'mg', label: 'mg — Miligramo' },
+      { value: 'cg', label: 'cg — Centigramo' },
+      { value: 'dg', label: 'dg — Decigramo' },
+      { value: 'g', label: 'g — Gramo' },
+      { value: 'dag', label: 'dag — Decagramo' },
+      { value: 'hg', label: 'hg — Hectogramo' },
+      { value: 'kg', label: 'kg — Kilogramo' },
+      { value: 't', label: 't — Tonelada' },
+    ],
+  },
+  {
+    label: 'Temperatura',
+    options: [
+      { value: '°C', label: '°C — Grados Celsius' },
+      { value: '°F', label: '°F — Grados Fahrenheit' },
+      { value: 'K', label: 'K — Kelvin' },
+    ],
+  },
+  {
+    label: 'Tiempo',
+    options: [
+      { value: 's', label: 's — Segundo' },
+      { value: 'min', label: 'min — Minuto' },
+      { value: 'h', label: 'h — Hora' },
+      { value: 'd', label: 'd — Día' },
+      { value: 'sem', label: 'sem — Semana' },
+      { value: 'mes', label: 'mes — Mes' },
+      { value: 'año', label: 'año — Año' },
+    ],
+  },
+  {
+    label: 'Presión',
+    options: [
+      { value: 'Pa', label: 'Pa — Pascal' },
+      { value: 'kPa', label: 'kPa — Kilopascal' },
+      { value: 'bar', label: 'bar — Bar' },
+      { value: 'psi', label: 'psi — Libras por pulgada cuadrada' },
+    ],
+  },
+  {
+    label: 'Energía',
+    options: [
+      { value: 'J', label: 'J — Julio' },
+      { value: 'kJ', label: 'kJ — Kilojulio' },
+      { value: 'cal', label: 'cal — Caloría' },
+      { value: 'kcal', label: 'kcal — Kilocaloría' },
+      { value: 'kWh', label: 'kWh — Kilovatio-hora' },
+    ],
+  },
+  {
+    label: 'Potencia',
+    options: [
+      { value: 'W', label: 'W — Vatio' },
+      { value: 'kW', label: 'kW — Kilovatio' },
+      { value: 'HP', label: 'HP — Caballo de fuerza' },
+    ],
+  },
+  {
+    label: 'Electricidad',
+    options: [
+      { value: 'V', label: 'V — Voltio' },
+      { value: 'A', label: 'A — Amperio' },
+      { value: 'Ω', label: 'Ω — Ohmio' },
+    ],
+  },
+  {
+    label: 'Unidades comerciales y de inventario',
+    options: [
+      { value: 'UND', label: 'UND — Unidad' },
+      { value: 'PAR', label: 'PAR — Par' },
+      { value: 'DOC', label: 'DOC — Docena' },
+      { value: 'CEN', label: 'CEN — Centena' },
+      { value: 'MIL', label: 'MIL — Millar' },
+      { value: 'CJ', label: 'CJ — Caja' },
+      { value: 'PQ', label: 'PQ — Paquete' },
+      { value: 'SAC', label: 'SAC — Saco' },
+      { value: 'BUL', label: 'BUL — Bulto' },
+      { value: 'RLL', label: 'RLL — Rollo' },
+      { value: 'BOT', label: 'BOT — Botella' },
+      { value: 'LAT', label: 'LAT — Lata' },
+      { value: 'BL', label: 'BL — Bolsa' },
+    ],
+  },
 ]
+
+const CAPITULOS_SINCO = [
+  { value: '1.1', label: '1.1 - Oficiales' },
+  { value: '1.2', label: '1.2 - Auxiliar de mantenimiento' },
+  { value: '3.1', label: '3.1 - Concretos, morteros y cemento' },
+  { value: '3.2', label: '3.2 - Aceros, mallas y alambres' },
+  { value: '3.3', label: '3.3 - Estucos, pinturas y aditivos' },
+  { value: '3.4', label: '3.4 - Material eléctrico' },
+  { value: '3.5', label: '3.5 - Material hidráulico' },
+  { value: '3.6', label: '3.6 - Material de ferretería - consumibles' },
+  { value: '3.7', label: '3.7 - Material de cantera - pavimentos' },
+  { value: '3.8', label: '3.8 - Sistemas de construcción livianas' },
+  { value: '3.9', label: '3.9 - Pisos y enchapes' },
+  { value: '3.10', label: '3.10 - Cubiertas - Impermeabilizaciones' },
+  { value: '3.11', label: '3.11 - Red de gas' },
+  { value: '3.12', label: '3.12 - Prefabricados' },
+  { value: '3.13', label: '3.13 - Neopreno' },
+  { value: '3.14', label: '3.14 - Cerraduras - Chapas' },
+  { value: '3.15', label: '3.15 - Micropilotes y anclajes' },
+  { value: '3.16', label: '3.16 - Estudios' },
+  { value: '3.17', label: '3.17 - Maderas de obra' },
+  { value: '4.1', label: '4.1 - Andamios' },
+  { value: '4.2', label: '4.2 - Formaleta' },
+  { value: '4.3', label: '4.3 - Equipo menor alquiler' },
+  { value: '4.4', label: '4.4 - Herramienta y equipo menor (compra)' },
+  { value: '4.5', label: '4.5 - Transporte de personal' },
+  { value: '5.1', label: '5.1 - Transporte de material' },
+  { value: '5.2', label: '5.2 - Combustible' },
+]
+
+const CATEGORY_PRESET_GROUPS: Record<string, string[]> = {
+  'Pinturas y anticorrosivos': ['Capacidad', 'Masa o Peso', 'Unidades comerciales y de inventario'],
+  'Limpieza e higiene': ['Capacidad', 'Masa o Peso', 'Unidades comerciales y de inventario'],
+  'Tuberías y fontanería': ['Longitud', 'Área (Superficie)', 'Volumen', 'Capacidad', 'Unidades comerciales y de inventario'],
+  'Materiales de construcción': ['Longitud', 'Área (Superficie)', 'Volumen', 'Masa o Peso', 'Unidades comerciales y de inventario'],
+  'Drywall y tabiquería': ['Longitud', 'Área (Superficie)', 'Unidades comerciales y de inventario'],
+  'Herramientas manuales': ['Longitud', 'Masa o Peso', 'Unidades comerciales y de inventario'],
+  'Herramientas eléctricas': ['Electricidad', 'Longitud', 'Unidades comerciales y de inventario'],
+  'Productos eléctricos': ['Electricidad', 'Masa o Peso', 'Unidades comerciales y de inventario'],
+  'Empaques y almacenamiento': ['Unidades comerciales y de inventario', 'Capacidad'],
+  'Elementos de seguridad (EPP)': ['Unidades comerciales y de inventario', 'Masa o Peso'],
+}
+
+const getUnitGroupsForProduct = (product: Producto): UnitGroup[] => {
+  const categoryName = product.categoria?.nombre ?? ''
+  const preferred = CATEGORY_PRESET_GROUPS[categoryName] ?? []
+  const preferredGroups = UNIT_GROUPS.filter((group) => preferred.includes(group.label))
+  const remainingGroups = UNIT_GROUPS.filter((group) => !preferred.includes(group.label))
+  return [...preferredGroups, ...remainingGroups]
+}
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 function StepBar({ step }: { step: number }) {
@@ -93,7 +288,6 @@ export default function NewRequisitionPage() {
   const [step, setStep] = useState(1)
   const { items, removeItem, updateCantidad, clearCart, totalEstimado } = useCart()
   const createMutation = useCreateRequisition()
-  const { data: unidades } = useUnidadesMedida()
 
   const productIds = items.map((i) => i.producto.id)
   const { data: bestSuppliers } = useBestSuppliers(productIds)
@@ -102,6 +296,8 @@ export default function NewRequisitionPage() {
   const [selectedUnits, setSelectedUnits] = useState<Record<number, string>>({})
   const [showSincoEditor, setShowSincoEditor] = useState<Record<number, boolean>>({})
   const [selectedSinco, setSelectedSinco] = useState<Record<number, string>>({})
+  const [selectedChapter, setSelectedChapter] = useState<Record<number, string>>({})
+  const [chapterModal, setChapterModal] = useState<{ open: boolean; productId?: number }>({ open: false })
 
   useEffect(() => {
     setSelectedUnits((current) => {
@@ -126,16 +322,6 @@ export default function NewRequisitionPage() {
   })
 
   const categoria = watch('categoria')
-
-  const unitOptions = [
-    ...KNOWN_UNIT_OPTIONS,
-    ...(unidades?.map((u) => ({ value: u.abreviatura, label: `${u.nombre} (${u.abreviatura})` })) ?? []),
-  ].reduce((unique, option) => {
-    if (!unique.some((existing) => existing.value === option.value)) {
-      unique.push(option)
-    }
-    return unique
-  }, [] as Array<{ value: string; label: string }> )
 
   const onSubmit = async (data: RequisicionFormData) => {
     if (items.length === 0) return
@@ -281,7 +467,7 @@ export default function NewRequisitionPage() {
                             )}
                           </div>
 
-                          {(producto.codigo || selectedSinco[producto.id]) && (
+                          {(producto.codigo || selectedSinco[producto.id] || selectedChapter[producto.id]) && (
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                               <span className="rounded-full bg-slate-100 px-2 py-1 font-medium text-slate-700">Código SINCO:</span>
                               <span className="rounded-full bg-slate-50 px-2 py-1 border border-slate-200 text-slate-700">
@@ -289,6 +475,60 @@ export default function NewRequisitionPage() {
                               </span>
                             </div>
                           )}
+
+                          <div className="mt-2 flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                            <button
+                              type="button"
+                              onClick={() => setChapterModal({ open: true, productId: producto.id })}
+                              className="inline-flex items-center gap-1 rounded-full border border-[#1e3a5f] px-3 py-1 text-[11px] font-semibold text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white transition-colors"
+                            >
+                              Capítulo SINCO
+                            </button>
+                            {selectedChapter[producto.id] && (
+                              <span className="rounded-full bg-[#1e3a5f]/10 text-[#1e3a5f] px-2 py-1 font-semibold">
+                                {selectedChapter[producto.id]}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr,220px] items-end">
+                            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500">
+                              <span className="font-semibold">Unidad:</span>
+                              <span className="uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-1 rounded-full">{unidadMedidaLabel(selectedUnits[producto.id] ?? producto.unidad_medida)}</span>
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-semibold text-slate-700 uppercase tracking-widest">Selecciona la unidad</label>
+                              <select
+                                value={selectedUnits[producto.id] ?? producto.unidad_medida}
+                                onChange={(event) => setSelectedUnits((current) => ({
+                                  ...current,
+                                  [producto.id]: event.target.value,
+                                }))}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                              >
+                                {getUnitGroupsForProduct(producto).map((group) => (
+                                  <optgroup key={group.label} label={group.label}>
+                                    {group.options.map((option) => (
+                                      <option key={`${group.label}-${option.value}`} value={option.value}>
+                                        {option.label}
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                ))}
+                                {(() => {
+                                  const currentValue = selectedUnits[producto.id] ?? producto.unidad_medida
+                                  const hasCurrent = getUnitGroupsForProduct(producto).some((group) =>
+                                    group.options.some((option) => option.value === currentValue)
+                                  )
+                                  return !hasCurrent ? (
+                                    <option key={`fallback-${currentValue}`} value={currentValue}>
+                                      {unidadMedidaLabel(currentValue)}
+                                    </option>
+                                  ) : null
+                                })()}
+                              </select>
+                            </div>
+                          </div>
 
                           {showSincoEditor[producto.id] && (
                             <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -315,7 +555,7 @@ export default function NewRequisitionPage() {
                               </div>
                               {best.proveedor_whatsapp && (
                                 <a
-                                  href={buildWhatsAppUrl(best.proveedor_whatsapp, `Hola ${best.proveedor_nombre}, necesito cotizar: ${producto.nombre} (${cantidad} ${producto.unidad_medida})`)}
+                                  href={buildWhatsAppUrl(best.proveedor_whatsapp, `Hola ${best.proveedor_nombre}, necesito cotizar: ${producto.nombre} (${cantidad} ${unidadMedidaLabel(selectedUnits[producto.id] ?? producto.unidad_medida)})`)}
                                   target="_blank" rel="noopener noreferrer"
                                   className="flex items-center gap-1 text-xs text-green-700 hover:text-green-800 font-medium"
                                 >
@@ -355,49 +595,6 @@ export default function NewRequisitionPage() {
                 })}
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                <p className="text-sm font-semibold text-slate-900">Unidad de medida por artículo</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {items.map((item) => (
-                    <div key={item.producto.id} className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{item.producto.nombre}</p>
-                          <p className="text-xs text-gray-500">Cantidad: {item.cantidad}</p>
-                        </div>
-                        <span className="text-[11px] uppercase tracking-wider text-slate-600 bg-slate-100 px-2 py-1 rounded-full">{selectedUnits[item.producto.id] || item.producto.unidad_medida}</span>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <label className="text-xs font-semibold text-slate-700 uppercase tracking-widest">Selecciona la unidad</label>
-                        <select
-                          value={selectedUnits[item.producto.id] ?? item.producto.unidad_medida}
-                          onChange={(event) => setSelectedUnits((current) => ({
-                            ...current,
-                            [item.producto.id]: event.target.value,
-                          }))}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-                        >
-                          {unitOptions.length > 0 ? (
-                            unitOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))
-                          ) : (
-                            <option value={item.producto.unidad_medida}>{item.producto.unidad_medida}</option>
-                          )}
-                        </select>
-                      </div>
-
-                      <p className="text-xs text-gray-500">
-                        Se va a pedir una unidad de medida <span className="font-semibold text-gray-700">{selectedUnits[item.producto.id] ?? item.producto.unidad_medida}</span> para este artículo.
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Total */}
               <div className="px-6 py-4 bg-gradient-to-r from-[#1e3a5f] to-blue-700 flex justify-between items-center">
                 <div>
@@ -421,6 +618,33 @@ export default function NewRequisitionPage() {
               </p>
             </div>
 
+            <div>
+              <Modal
+                open={chapterModal.open}
+                onClose={() => setChapterModal({ open: false })}
+                title="Seleccionar capítulo SINCO"
+                size="sm"
+              >
+                <div className="space-y-3">
+                  {CAPITULOS_SINCO.map((cap) => (
+                    <button
+                      key={cap.value}
+                      type="button"
+                      onClick={() => {
+                        if (chapterModal.productId) {
+                          setSelectedChapter((prev) => ({ ...prev, [chapterModal.productId!]: cap.label }))
+                        }
+                        setChapterModal({ open: false })
+                      }}
+                      className="w-full rounded-xl border border-gray-200 px-4 py-3 text-left text-sm text-gray-800 hover:bg-[#f8fafc] transition-colors"
+                    >
+                      <div className="font-semibold">{cap.value}</div>
+                      <div className="text-xs text-gray-500">{cap.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </Modal>
+            </div>
             <div className="flex gap-3 justify-between">
               <Button type="button" variant="ghost" onClick={() => setStep(1)} icon={<ChevronLeft size={16} />}>
                 Atrás

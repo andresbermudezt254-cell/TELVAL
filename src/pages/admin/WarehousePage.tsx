@@ -5,7 +5,7 @@ import type { Requisicion } from '@/types'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Spinner } from '@/components/ui/Spinner'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
-import { formatDate } from '@/lib/utils'
+import { formatDate, unidadMedidaLabel } from '@/lib/utils'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
 
 function progreso(detalles: Array<{ completado: boolean }> | undefined) {
@@ -16,11 +16,11 @@ function progreso(detalles: Array<{ completado: boolean }> | undefined) {
 
 export default function WarehousePage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const { data: requisitionsResponse, isLoading } = useRequisitions({ estado: ['EN_COMPRA', 'PARCIAL'] })
+  const { data: requisitionsResponse, isLoading, error } = useRequisitions({ estado: ['EN_COMPRA', 'PARCIAL'] })
   const requisitions = (requisitionsResponse?.data ?? []) as Requisicion[]
 
   const selected = selectedId ? requisitions.find((r) => r.id === selectedId) : null
-  const { data: reqDetail, isLoading: isDetailLoading } = useRequisitionById(selected?.id)
+  const { data: reqDetail, isLoading: isDetailLoading } = useRequisitionById(selectedId ?? undefined)
   const marcarRecibido = useMarcarItemCompletado()
 
   return (
@@ -32,6 +32,11 @@ export default function WarehousePage() {
 
       {isLoading ? (
         <div className="flex justify-center py-24"><Spinner /></div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+          <p className="font-semibold">Error cargando requisiciones</p>
+          <p className="mt-2 text-xs text-red-600">{error.message}</p>
+        </div>
       ) : !requisitions.length ? (
         <EmptyState
           icon={<Truck size={40} className="text-gray-300" />}
@@ -83,58 +88,69 @@ export default function WarehousePage() {
             ) : isDetailLoading || !reqDetail ? (
               <div className="h-full grid place-items-center py-16"><Spinner /></div>
             ) : (
-              <div>
-                <div className="px-5 py-4 border-b bg-gray-50">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-mono text-sm font-bold text-[#1e3a5f]">{reqDetail.codigo}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Solicitante: {(reqDetail as any).empleado?.nombre_completo ?? '—'} · Proveedor: {(reqDetail as any).proveedor_final?.nombre ?? '—'}</p>
-                    </div>
-                    <div className="text-right">
-                      <StatusBadge estado={reqDetail.estado} size="sm" />
-                      <p className="text-xs text-gray-500 mt-1"><CurrencyCOP value={reqDetail.total_estimado} /></p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-5 space-y-3">
-                  {reqDetail.detalles?.map((item) => (
-                    <div key={item.id} className={`rounded-xl border p-3.5 ${item.completado ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className={`text-sm font-semibold ${item.completado ? 'text-emerald-800' : 'text-gray-800'}`}>
-                            #{item.numero_item ?? item.id} · {item.producto?.nombre}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {item.cantidad} {item.unidad_medida?.abreviatura ?? item.producto?.unidad_medida ?? 'UND'}
-                            {item.producto?.codigo ? ` · ${item.producto.codigo}` : ''}
-                          </p>
-                          {item.completado && (
-                            <p className="text-[11px] text-emerald-700 mt-1">
-                              Recibido {item.completado_at ? formatDate(item.completado_at) : ''}
-                              {item.completado_por_usuario?.nombre_completo ? ` por ${item.completado_por_usuario.nombre_completo}` : ''}
-                            </p>
-                          )}
-                        </div>
-
-                        {item.completado ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full">
-                            <CheckCircle2 size={12} /> Recibido
-                          </span>
-                        ) : (
-                          <button
-                            disabled={marcarRecibido.isPending}
-                            onClick={() => marcarRecibido.mutate({ itemId: item.id, requisicionId: reqDetail.id, completado: true })}
-                            className="inline-flex items-center gap-1 rounded-lg bg-[#1e3a5f] text-white text-xs font-semibold px-3 py-2 hover:bg-[#162d4a] transition-colors disabled:opacity-50"
-                          >
-                            <PackageCheck size={13} /> Marcar recibido
-                          </button>
-                        )}
+              <>
+                <div>
+                  <div className="px-5 py-4 border-b bg-gray-50">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="font-mono text-sm font-bold text-[#1e3a5f]">{reqDetail.codigo}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Solicitante: {(reqDetail as any).empleado?.nombre_completo ?? '—'} · Proveedor: {(reqDetail as any).proveedor_final?.nombre ?? '—'}</p>
+                      </div>
+                      <div className="text-right">
+                        <StatusBadge estado={reqDetail.estado} size="sm" />
+                        <p className="text-xs text-gray-500 mt-1"><CurrencyCOP value={reqDetail.total_estimado} /></p>
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    {(reqDetail.estado === 'EN_COMPRA' || reqDetail.estado === 'PARCIAL') && (
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                        <div className="flex flex-col gap-2">
+                          <p className="text-sm font-semibold text-gray-900">Recepción en almacén</p>
+                          <p className="text-xs text-gray-500">Marca los ítems recibidos. El despacho a los tecnólogos no se registra en este módulo.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {reqDetail.detalles?.map((item) => (
+                      <div key={item.id} className={`rounded-xl border p-3.5 ${item.completado ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className={`text-sm font-semibold ${item.completado ? 'text-emerald-800' : 'text-gray-800'}`}>
+                              #{item.numero_item ?? item.id} · {item.producto?.nombre}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              {item.cantidad} {unidadMedidaLabel(item.unidad_medida?.abreviatura ?? item.producto?.unidad_medida ?? 'UND')}
+                              {item.producto?.codigo ? ` · ${item.producto.codigo}` : ''}
+                            </p>
+                            {item.completado && (
+                              <p className="text-[11px] text-emerald-700 mt-1">
+                                Recibido {item.completado_at ? formatDate(item.completado_at) : ''}
+                                {item.completado_por_usuario?.nombre_completo ? ` por ${item.completado_por_usuario.nombre_completo}` : ''}
+                              </p>
+                            )}
+                          </div>
+
+                          {item.completado ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full">
+                              <CheckCircle2 size={12} /> Recibido
+                            </span>
+                          ) : (
+                            <button
+                              disabled={marcarRecibido.isPending}
+                              onClick={() => marcarRecibido.mutate({ itemId: item.id, requisicionId: reqDetail.id, completado: true })}
+                              className="inline-flex items-center gap-1 rounded-lg bg-[#1e3a5f] text-white text-xs font-semibold px-3 py-2 hover:bg-[#162d4a] transition-colors disabled:opacity-50"
+                            >
+                              <PackageCheck size={13} /> Marcar recibido
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

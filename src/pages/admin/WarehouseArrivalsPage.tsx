@@ -1,18 +1,24 @@
 import { useState } from 'react'
-import { useRequisitions, useMarcarItemCompletado, useWarehouseVerdict } from '@/hooks/useRequisitions'
+import { useRequisitions, useMarcarItemCompletado } from '@/hooks/useRequisitions'
 import { PageLoader } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
-import { toast } from 'sonner'
+import { unidadMedidaLabel } from '@/lib/utils'
 
 export default function WarehouseArrivalsPage() {
-  const { data, isLoading } = useRequisitions({ estado: ['EN_COMPRA', 'PARCIAL'] })
+  const { data, isLoading, error } = useRequisitions({ estado: ['EN_COMPRA', 'PARCIAL'] })
   const marcarItem = useMarcarItemCompletado()
-  const verdict = useWarehouseVerdict()
+
 
   const [selectedReq, setSelectedReq] = useState<number | null>(null)
 
   if (isLoading) return <PageLoader />
+  if (error) return (
+    <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+      <p className="font-semibold">Error cargando requisiciones</p>
+      <p className="mt-2 text-xs text-red-600">{error.message}</p>
+    </div>
+  )
 
   const openModal = (id: number) => setSelectedReq(id)
   const closeModal = () => setSelectedReq(null)
@@ -46,17 +52,14 @@ export default function WarehouseArrivalsPage() {
         requisitionId={selectedReq}
         onClose={closeModal}
         marcarItem={marcarItem}
-        verdict={verdict}
       />
     </div>
   )
 }
 
-function ArrivalModal({ open, requisitionId, onClose, marcarItem, verdict }: any) {
+function ArrivalModal({ open, requisitionId, onClose, marcarItem }: any) {
   const { data } = useRequisitions({})
   const req = data?.data.find((x) => x.id === requisitionId)
-  const [direccion, setDireccion] = useState(req?.direccion_despacho || '')
-  const [notas, setNotas] = useState('')
 
   if (!open) return null
 
@@ -71,23 +74,14 @@ function ArrivalModal({ open, requisitionId, onClose, marcarItem, verdict }: any
     }
   }
 
-  const handleDispatch = async () => {
-    if (!req) return
-    const cantidad = (req.detalles ?? []).filter((d: any) => d.completado).length
-    const estado = cantidad === (req.detalles ?? []).length ? 'COMPLETADA' : 'PARCIAL'
-    try {
-      await verdict.mutateAsync({ requisicionId: req.id, estado, notas, direccion_despacho: direccion, cantidad_despachada: cantidad })
-      onClose()
-    } catch (e) {
-      // handled by hook
-    }
+  const handleClose = () => {
+    onClose()
   }
 
   return (
     <Modal open={open} onClose={onClose} title={`Llegadas — ${req?.codigo ?? ''}`} size="lg" footer={
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onClose}>Cerrar</Button>
-        <Button onClick={handleDispatch} loading={verdict.isPending}>Despachar ({totalArrived}/{req?.detalles?.length ?? 0})</Button>
+        <Button variant="ghost" onClick={handleClose}>Cerrar</Button>
       </div>
     }>
       {!req ? <p>Cargando...</p> : (
@@ -97,7 +91,7 @@ function ArrivalModal({ open, requisitionId, onClose, marcarItem, verdict }: any
               <div key={d.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
                 <div>
                   <p className="font-medium">{d.producto?.nombre}</p>
-                  <p className="text-xs text-gray-500">Solicitado: {d.cantidad} {d.producto?.unidad_medida}</p>
+                  <p className="text-xs text-gray-500">Solicitado: {d.cantidad} {unidadMedidaLabel(d.producto?.unidad_medida ?? 'UND')}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <label className="inline-flex items-center gap-2">
@@ -108,13 +102,7 @@ function ArrivalModal({ open, requisitionId, onClose, marcarItem, verdict }: any
               </div>
             ))}
           </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <label className="text-sm">Dirección de despacho</label>
-            <input className="w-full p-2 border rounded" value={direccion} onChange={(e) => setDireccion(e.target.value)} />
-            <label className="text-sm">Notas de almacén</label>
-            <textarea className="w-full p-2 border rounded h-24" value={notas} onChange={(e) => setNotas(e.target.value)} />
-          </div>
+          <p className="text-sm text-gray-500">Marca los ítems recibidos. El despacho a tecnólogos se gestiona fuera de este módulo.</p>
         </div>
       )}
     </Modal>

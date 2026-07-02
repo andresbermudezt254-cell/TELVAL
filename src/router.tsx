@@ -130,7 +130,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'almacen',
-        element: <ProtectedRoute roles={['almacen', 'superadmin', 'admin']}><WarehousePage /></ProtectedRoute>,
+        element: <ProtectedRoute roles={['almacen', 'superadmin']}><WarehousePage /></ProtectedRoute>,
       },
     ],
   },

@@ -22,7 +22,7 @@ export function useRequisitions(filters?: {
       .select(`
         *,
         empleado:usuarios!requisiciones_empleado_id_fkey(id, nombre_completo, email, especialidad),
-        detalles:detalle_requisicion(id)
+        detalles:detalle_requisicion(id, completado)
       `, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range((page - 1) * pageSize, page * pageSize - 1)
@@ -39,7 +39,39 @@ export function useRequisitions(filters?: {
     if (filters?.empleadoId) query = query.eq('empleado_id', filters.empleadoId)
 
     const { data, error, count } = await query
-    if (error) throw error
+    if (error) {
+      const invalidEnumMatch = error.message?.matchAll(/"([^"]+)"/g)
+      const invalidEnums = invalidEnumMatch ? Array.from(invalidEnumMatch, (m) => m[1]) : []
+      if (error.code === '22P02' && filters?.estado && invalidEnums.length > 0) {
+        const requestedEstados = Array.isArray(filters.estado) ? filters.estado : [filters.estado]
+        const validEstados = requestedEstados.filter((estado) => !invalidEnums.includes(estado))
+        if (validEstados.length > 0) {
+          let retryQuery = supabase
+            .from('requisiciones')
+            .select(`
+        *,
+        empleado:usuarios!requisiciones_empleado_id_fkey(id, nombre_completo, email, especialidad),
+        detalles:detalle_requisicion(id)
+      `, { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range((page - 1) * pageSize, page * pageSize - 1)
+
+          if (user?.rol === 'empleado') {
+            retryQuery = retryQuery.eq('empleado_id', user.id)
+          }
+          retryQuery = retryQuery.in('estado', validEstados)
+          if (filters?.categoria) retryQuery = retryQuery.eq('categoria', filters.categoria)
+          if (filters?.especialidad) retryQuery = retryQuery.eq('especialidad', filters.especialidad)
+          if (filters?.empleadoId) retryQuery = retryQuery.eq('empleado_id', filters.empleadoId)
+
+          const { data: retryData, error: retryError, count: retryCount } = await retryQuery
+          if (retryError) throw retryError
+          return { data: retryData as Requisicion[], count: retryCount ?? 0 }
+        }
+      }
+      throw error
+    }
+
     return { data: data as Requisicion[], count: count ?? 0 }
   }
 
@@ -67,7 +99,7 @@ export function useRequisitionById(id?: number) {
           admin:usuarios!requisiciones_admin_id_fkey(id, nombre_completo),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
-            precio_unitario, total_linea, notas, created_at,
+            precio_unitario, total_linea, notas, created_at, completado, completado_at, completado_por,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
             proveedor_sugerido:proveedores!detalle_requisicion_proveedor_sugerido_id_fkey(id, nombre, whatsapp, codigo_interno)
           ),
@@ -82,6 +114,8 @@ export function useRequisitionById(id?: number) {
       return (data ?? null) as Requisicion | null
     },
     enabled: !!id,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -204,6 +238,10 @@ export function useUpdateRequisitionStatus() {
       estado: string
       notas_admin?: string
     }) => {
+      if (estado === 'COMPLETADA') {
+        throw new Error('El cierre final solo puede registrarse desde el módulo de almacén.')
+      }
+
       const updates: Record<string, unknown> = { estado }
       if (notas_admin !== undefined) updates.notas_admin = notas_admin
       if (estado === 'APROBADA') {
@@ -268,90 +306,82 @@ export function useMarcarItemCompletado() {
 
   return useMutation({
     mutationFn: async ({ itemId, requisicionId, completado }: { itemId: number; requisicionId: number; completado: boolean }) => {
-      const { data: reqPrev } = await supabase
-        .from('requisiciones')
-        .select('estado, codigo, empleado_id, admin_id')
-        .eq('id', requisicionId)
-        .single()
+      if (user?.rol !== 'almacen' && user?.rol !== 'admin' && user?.rol !== 'superadmin') {
+        throw new Error('Solo almacén o admin puede registrar la recepción de artículos.')
+      }
 
-      const { error } = await supabase
-        .from('detalle_requisicion')
-        .update({
-          completado,
-          completado_at: completado ? new Date().toISOString() : null,
-          completado_por: completado ? user!.id : null,
-        })
-        .eq('id', itemId)
-      if (error) throw error
+      console.log('🔵 [mutationFn] Iniciando - itemId:', itemId, 'requisicionId:', requisicionId, 'completado:', completado)
 
-      // Recalculate requisicion estado based on item completion
-      const { data: items } = await supabase
-        .from('detalle_requisicion')
-        .select('completado')
-        .eq('requisicion_id', requisicionId)
+      // Use RPC function instead of direct updates
+      // This function handles user sync + item update + state calculation all in one transaction
+      console.log('🔄 [RPC] Llamando marcar_item_recibido_v2...')
 
-      if (items && items.length > 0) {
-        const total = items.length
-        const completados = items.filter((i) => i.completado).length
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('marcar_item_recibido_v2', {
+        p_user_id: user!.id,
+        p_user_email: user!.email,
+        p_user_nombre: user!.nombre_completo || user!.email,
+        p_user_rol: user!.rol,
+        p_item_id: itemId,
+        p_req_id: requisicionId,
+        p_completado: completado,
+      })
 
-        let nuevoEstado: 'EN_COMPRA' | 'PARCIAL' | 'COMPLETADA' = 'EN_COMPRA'
-        if (completados === total) {
-          nuevoEstado = 'COMPLETADA'
-        } else if (completados > 0) {
-          nuevoEstado = 'PARCIAL'
-        }
+      console.log('📋 [RPC] Resultado:', { rpcResult, rpcError })
 
-        const { error: estadoError } = await supabase
-          .from('requisiciones')
-          .update({ estado: nuevoEstado })
-          .eq('id', requisicionId)
-        if (estadoError) throw estadoError
+      if (rpcError) {
+        console.error('❌ [RPC] Error:', rpcError.message)
+        throw rpcError
+      }
 
-        await supabase.from('historial_requisicion').insert({
-          requisicion_id: requisicionId,
-          usuario_id: user!.id,
-          estado_anterior: reqPrev?.estado,
-          estado_nuevo: nuevoEstado,
-          comentario: `Ítem ${itemId} ${completado ? 'marcado como recibido' : 'desmarcado'}. ${completados}/${total} recibidos.`,
-        })
+      if (!rpcResult || rpcResult.error) {
+        console.error('⚠️ [RPC] Error en resultado:', rpcResult?.error)
+        throw new Error(rpcResult?.error || 'Error en RPC marcar_item_recibido_v2')
+      }
 
-        if (reqPrev?.empleado_id) {
-          const titulo = nuevoEstado === 'COMPLETADA'
-            ? `Requisición ${reqPrev.codigo} completada`
-            : `Requisición ${reqPrev.codigo} parcial`
-          const mensaje = nuevoEstado === 'COMPLETADA'
-            ? 'Todos los materiales fueron entregados en almacén.'
-            : `${completados} de ${total} materiales han llegado.`
-
-          const notifications = [
-            {
-              usuario_id: reqPrev.empleado_id,
-              requisicion_id: requisicionId,
-              tipo: nuevoEstado === 'COMPLETADA' ? 'success' : 'info',
-              titulo,
-              mensaje,
-            },
-          ]
-
-          if (reqPrev.admin_id) {
-            notifications.push({
-              usuario_id: reqPrev.admin_id,
-              requisicion_id: requisicionId,
-              tipo: nuevoEstado === 'COMPLETADA' ? 'success' : 'info',
-              titulo,
-              mensaje,
-            })
-          }
-
-          await supabase.from('notificaciones').insert(notifications)
-        }
+      console.log('✅ [mutationFn] Completado - estado:', rpcResult.nuevoEstado)
+      return {
+        nuevoEstado: rpcResult.nuevoEstado,
+        completados: rpcResult.completados,
+        total: rpcResult.total,
       }
     },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ['requisition', vars.requisicionId] })
-      queryClient.invalidateQueries({ queryKey: ['requisitions'] })
+    onSuccess: async (result, vars) => {
+      // Step 1: Update detail query cache with new data
+      await queryClient.invalidateQueries({
+        queryKey: ['requisition', vars.requisicionId],
+        exact: true,
+      })
+
+      // Step 2: Update list query cache
+      await queryClient.invalidateQueries({
+        queryKey: ['requisitions'],
+        exact: false,
+      })
+
+      // Step 3: Force refetch both queries immediately
+      await queryClient.refetchQueries({
+        queryKey: ['requisition', vars.requisicionId],
+        exact: true,
+      })
+
+      await queryClient.refetchQueries({
+        queryKey: ['requisitions'],
+        exact: false,
+      })
+
+      toast.success('Recepción registrada con éxito')
     },
-    onError: () => { toast.error('Error al actualizar el ítem') },
+    onError: (err) => {
+      const message = err && typeof err === 'object'
+        ? ('message' in err && typeof (err as any).message === 'string' ? (err as any).message : JSON.stringify(err))
+        : String(err)
+      if (message.includes("Could not find the 'completado' column")) {
+        toast.error('Error al actualizar el ítem: falta la columna completado en detalle_requisicion. Ejecuta la migración de base de datos.')
+      } else {
+        toast.error(`Error al actualizar el ítem: ${message}`)
+      }
+      console.error('useMarcarItemCompletado error', err)
+    },
   })
 }
 
@@ -374,11 +404,83 @@ export function useUpdateProveedorFinal() {
   })
 }
 
-export function useWarehouseVerdict() {
+export function useChangeDetalleProveedor() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    mutationFn: async ({ detalleId, proveedorId }: { detalleId: number; proveedorId: number | null }) => {
+      const { error } = await supabase
+        .from('detalle_requisicion')
+        .update({ proveedor_sugerido_id: proveedorId })
+        .eq('id', detalleId)
+      if (error) throw error
+    },
+    // Optimistic update: update cached order-summary and requisition immediately
+    onMutate: async (vars: any) => {
+      await queryClient.cancelQueries({ queryKey: ['order-summary'] })
+      await queryClient.cancelQueries({ queryKey: ['requisition', vars.requisicionId] })
+
+      const previousOrderSummaries = queryClient.getQueriesData(['order-summary'])
+      const previousRequisition = queryClient.getQueryData(['requisition', vars.requisicionId])
+      const suppliersCache = queryClient.getQueryData(['suppliers', '']) || queryClient.getQueryData(['suppliers'])
+      const newSupplier = Array.isArray(suppliersCache) ? (suppliersCache as any[]).find((s) => s.id === vars.proveedorId) : undefined
+
+      // Update all cached order-summary queries
+      const summaries = queryClient.getQueriesData(['order-summary'])
+      summaries.forEach(([key, data]: any) => {
+        if (!data) return
+        const items = (data as any[])
+        const next = items.map((it: any) => {
+          if (it.id === vars.detalleId) {
+            return { ...it, proveedor: newSupplier ? { id: newSupplier.id, nombre: newSupplier.nombre, whatsapp: newSupplier.whatsapp } : it.proveedor }
+          }
+          return it
+        })
+        queryClient.setQueryData(key, next)
+      })
+
+      // Update requisition detail cache if present
+      if (previousRequisition) {
+        const req = previousRequisition as any
+        const next = { ...req, detalles: (req.detalles ?? []).map((d: any) => d.id === vars.detalleId ? { ...d, proveedor_sugerido_id: vars.proveedorId, proveedor_sugerido: newSupplier ? { id: newSupplier.id, nombre: newSupplier.nombre, whatsapp: newSupplier.whatsapp } : d.proveedor_sugerido } : d) }
+        queryClient.setQueryData(['requisition', vars.requisicionId], next)
+      }
+
+      return { previousOrderSummaries, previousRequisition }
+    },
+    onSuccess: async (_, vars: any) => {
+      queryClient.invalidateQueries({ queryKey: ['order-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['requisitions'] })
+      if (vars?.requisicionId) {
+        queryClient.invalidateQueries({ queryKey: ['requisition', vars.requisicionId], exact: true })
+        queryClient.refetchQueries({ queryKey: ['requisition', vars.requisicionId], exact: true })
+      }
+      toast.success('Proveedor del ítem actualizado')
+    },
+    onError: (err, vars, context: any) => {
+      // rollback
+      const prev = context?.previousOrderSummaries
+      if (prev) {
+        prev.forEach(([key, data]: any) => queryClient.setQueryData(key, data))
+      }
+      if (context?.previousRequisition) {
+        queryClient.setQueryData(['requisition', vars.requisicionId], context.previousRequisition)
+      }
+      toast.error('Error al actualizar el proveedor del ítem')
+    },
+  })
+}
+
+export function useWarehouseVerdict() {
+  const queryClient = useQueryClient()
+  const user = useAuthStore((s) => s.user)
+
+  return useMutation({
     mutationFn: async ({ requisicionId, estado, notas, direccion_despacho, cantidad_despachada }: { requisicionId: number; estado: 'PARCIAL' | 'COMPLETADA'; notas?: string; direccion_despacho: string; cantidad_despachada: number }) => {
+      if (user?.rol !== 'almacen' && user?.rol !== 'superadmin') {
+        throw new Error('Solo almacén puede registrar el veredicto de entrega.')
+      }
+
       const { data: prev } = await supabase
         .from('requisiciones')
         .select('estado')

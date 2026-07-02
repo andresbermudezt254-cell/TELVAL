@@ -13,8 +13,10 @@ import {
   Clock,
   Hash,
 } from 'lucide-react'
-import { useOrderSummary } from '@/hooks/useRequisitions'
-import { formatCOP } from '@/lib/utils'
+import { useOrderSummary, useChangeDetalleProveedor } from '@/hooks/useRequisitions'
+import { useSuppliers, useSuppliersByProducts } from '@/hooks/useSuppliers'
+import { formatCOP, unidadMedidaLabel } from '@/lib/utils'
+import { Modal } from '@/components/ui/Modal'
 import { Spinner } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -55,6 +57,63 @@ const loadPedidos = (): Set<number> => {
 }
 const savePedidos = (ids: Set<number>) =>
   localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]))
+
+function SupplierSwitcher({ row }: { row: any }) {
+  const [open, setOpen] = useState(false)
+  const [q, setQ] = useState('')
+  const productId = row?.producto?.id
+  const { data: suppliersWithProduct } = useSuppliersByProducts(productId ? [productId] : [])
+  const change = useChangeDetalleProveedor()
+
+  // Mostrar solo proveedores que venden este producto
+  const suppliersToShow = (suppliersWithProduct ?? []).filter((s: any) => s.activo !== false)
+  const filtered = suppliersToShow.filter((s: any) => s.nombre.toLowerCase().includes(q.toLowerCase()))
+
+  if (!productId || suppliersToShow.length === 0) return null
+
+  return (
+    <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-[11px] font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md hover:bg-orange-100"
+      >
+        Cambiar proveedor
+      </button>
+
+      <Modal open={open} onClose={() => setOpen(false)} title={`Seleccionar proveedor — ${row.producto?.nombre ?? ''}`} size="md">
+        <div className="mb-3">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar proveedor..."
+            className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-300"
+          />
+        </div>
+
+        <div className="space-y-1">
+          {filtered.length === 0 ? (
+            <p className="text-sm text-gray-500">No se encontraron proveedores</p>
+          ) : (
+            filtered.map((s: any) => (
+              <button
+                key={s.id}
+                onClick={() => change.mutate({ detalleId: row.id, proveedorId: s.id, requisicionId: row.requisicion_id }, { onSuccess: () => setOpen(false) })}
+                className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-50"
+              >
+                <div className="text-left">
+                  <div className="font-semibold text-sm text-gray-800">{s.nombre}</div>
+                  {s.whatsapp && <div className="text-[11px] text-gray-500">WhatsApp: {s.whatsapp}</div>}
+                </div>
+                <div className="text-[12px] text-blue-600 font-semibold">Seleccionar</div>
+              </button>
+            ))
+          )}
+        </div>
+      </Modal>
+    </div>
+  )
+}
 
 export default function OrderSummaryPage() {
   const [activeEstados, setActiveEstados] = useState<string[]>([
@@ -304,6 +363,7 @@ export default function OrderSummaryPage() {
                                     {row.producto?.codigo && (
                                       <p className="text-[10px] text-gray-400 font-mono">#{row.producto.codigo}</p>
                                     )}
+                                    <SupplierSwitcher row={row} />
                                   </div>
                                 </div>
                               </td>
@@ -342,7 +402,7 @@ export default function OrderSummaryPage() {
                                 <span className="text-xs font-black text-[#1e3a5f]">
                                   {Number(row.cantidad).toLocaleString('es-CO')}
                                 </span>
-                                <span className="text-[10px] text-gray-400 ml-0.5">{row.producto?.unidad_medida}</span>
+                                <span className="text-[10px] text-gray-400 ml-0.5">{unidadMedidaLabel(row.producto?.unidad_medida ?? 'UND')}</span>
                               </td>
 
                               <td className="px-3 py-3 text-right">

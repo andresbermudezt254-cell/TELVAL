@@ -15,7 +15,7 @@ import { PageLoader } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Badge } from '@/components/ui/Badge'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
-import { buildWhatsAppUrl } from '@/lib/utils'
+import { buildWhatsAppUrl, unidadMedidaLabel } from '@/lib/utils'
 import { toast } from 'sonner'
 
 function PriceManagementModal({ supplier, onClose }: { supplier: { id: number; nombre: string } | null; onClose: () => void }) {
@@ -72,7 +72,7 @@ function PriceManagementModal({ supplier, onClose }: { supplier: { id: number; n
 
   const productOptions = (products ?? []).map((p) => ({
     value: String(p.id),
-    label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre} (${p.unidad_medida})`,
+    label: `${p.codigo ? p.codigo + ' — ' : ''}${p.nombre} (${unidadMedidaLabel(p.unidad_medida)})`,
   }))
 
   return (
@@ -145,7 +145,7 @@ function PriceManagementModal({ supplier, onClose }: { supplier: { id: number; n
                   <tr key={p.producto_id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="px-3 py-2.5 font-mono text-xs text-gray-400">{p.producto?.codigo}</td>
                     <td className="px-3 py-2.5 font-medium text-gray-800">{p.producto?.nombre}</td>
-                    <td className="px-3 py-2.5 text-xs text-gray-500">{p.producto?.unidad_medida}</td>
+                    <td className="px-3 py-2.5 text-xs text-gray-500">{unidadMedidaLabel(p.producto?.unidad_medida ?? 'UND')}</td>
                     <td className="px-3 py-2.5 font-semibold text-green-700"><CurrencyCOP value={p.precio_unitario} /></td>
                     <td className="px-3 py-2.5 text-xs text-gray-400">
                       {p.fecha_precio ? new Date(p.fecha_precio).toLocaleDateString('es-CO') : '—'}
@@ -196,7 +196,7 @@ function CatalogModal({ open, onClose, supplier }: { open: boolean; onClose: () 
                   <td className="px-3 py-2 font-mono text-xs text-gray-400">{item.producto?.codigo}</td>
                   <td className="px-3 py-2 font-medium">{item.producto?.nombre}</td>
                   <td className="px-3 py-2 text-xs text-gray-500">{item.producto?.categoria?.icono} {item.producto?.categoria?.nombre}</td>
-                  <td className="px-3 py-2 text-xs">{item.producto?.unidad_medida}</td>
+                  <td className="px-3 py-2 text-xs">{unidadMedidaLabel(item.producto?.unidad_medida ?? 'UND')}</td>
                   <td className="px-3 py-2 font-semibold text-green-700"><CurrencyCOP value={item.precio_unitario} /></td>
                   <td className="px-3 py-2 text-xs text-gray-400">{item.fecha_precio ? new Date(item.fecha_precio).toLocaleDateString('es-CO') : '—'}</td>
                 </tr>

@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Copy, Check, MessageCircle, Clock, CheckCircle2, ShoppingCart, PackageCheck, XCircle, RotateCcw, Truck, ChevronDown } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
 import { useRequisitionById, useUpdateRequisitionStatus, useMarcarItemCompletado, useUpdateProveedorFinal, useWarehouseVerdict } from '@/hooks/useRequisitions'
 import { useSuppliers, useSuppliersByProducts } from '@/hooks/useSuppliers'
 import { usePriceModal } from '@/components/suppliers/PriceCompareModal'
@@ -12,7 +13,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
 import { Button } from '@/components/ui/Button'
 import { PageLoader } from '@/components/ui/Spinner'
-import { formatDate, generarResumenWhatsApp } from '@/lib/utils'
+import { formatDate, generarResumenWhatsApp, unidadMedidaLabel } from '@/lib/utils'
 import type { EstadoRequisicion } from '@/types'
 
 const WORKFLOW: Array<{ estado: EstadoRequisicion; label: string; icon: React.ReactNode }> = [
@@ -73,9 +74,11 @@ export default function RequisitionDetailPage() {
   const productIds = req?.detalles?.map((d) => d.producto_id) ?? []
   const { data: proveedoresConTodosLosProductos } = useSuppliersByProducts(productIds)
   const priceModal = usePriceModal()
+  const user = useAuthStore((s) => s.user)
+  const isWarehouseUser = user?.rol === 'almacen' || user?.rol === 'superadmin'
   const [copied, setCopied] = useState(false)
   const [comentario, setComentario] = useState('')
-  const [confirmAction, setConfirmAction] = useState<'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | null>(null)
   const [proveedorFinalId, setProveedorFinalId] = useState<string>('')
   const [showProveedorEditor, setShowProveedorEditor] = useState(false)
   const [warehouseModalOpen, setWarehouseModalOpen] = useState(false)
@@ -213,13 +216,11 @@ export default function RequisitionDetailPage() {
                   <ShoppingCart size={14} /> Iniciar compra
                 </button>
               )}
-              {(req.estado === 'EN_COMPRA' || req.estado === 'PARCIAL') && (
-                <button
-                  onClick={() => setConfirmAction('COMPLETADA')}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm"
-                >
-                  <PackageCheck size={14} /> Marcar completada
-                </button>
+              {['EN_COMPRA', 'PARCIAL'].includes(req.estado) && (
+                <div className="w-full rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                  <p className="font-medium text-gray-800">Recepción en almacén</p>
+                  <p className="mt-1 text-xs text-gray-500">La recepción final y la marca de entrega completa se registran desde el módulo de Almacén.</p>
+                </div>
               )}
               {(req as any).empleado?.whatsapp && (
                 <a
@@ -307,21 +308,28 @@ export default function RequisitionDetailPage() {
             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Almacén</p>
             <p className="text-sm text-gray-500">Envía esta requisición a almacén y registra si llegó completa o parcial.</p>
           </div>
-          {req.estado === 'EN_COMPRA' && (
-            <button
-              type="button"
-              onClick={() => setWarehouseModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-[#1e3a5f] px-4 py-2 text-xs font-semibold text-white hover:bg-[#162d4a] transition-colors"
-            >
-              <CheckCircle2 size={14} /> Enviar a almacén
-            </button>
-          )}
-          {req.estado === 'PARCIAL' && (
-            <span className="px-3 py-2 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Entrega parcial registrada</span>
-          )}
-          {req.estado === 'COMPLETADA' && (
-            <span className="px-3 py-2 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Despacho completo registrado</span>
-          )}
+          <div className="flex items-center gap-2">
+            {req.estado === 'PARCIAL' && (
+              <span className="px-3 py-2 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">Entrega parcial registrada</span>
+            )}
+            {req.estado === 'COMPLETADA' && (
+              <span className="px-3 py-2 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Despacho completo registrado</span>
+            )}
+            {isWarehouseUser && ['EN_COMPRA', 'PARCIAL'].includes(req.estado) && (
+              <button
+                onClick={() => {
+                  setWarehouseModalOpen(true)
+                  setWarehouseDirection(req.direccion_despacho ?? '')
+                  setWarehouseDispatchCount(req.detalles?.filter((d) => d.completado).length ?? 0)
+                  setWarehouseState(req.estado === 'PARCIAL' ? 'PARCIAL' : 'COMPLETADA')
+                  setWarehouseNote(req.notas_almacen ?? '')
+                }}
+                className="inline-flex items-center gap-2 rounded-full bg-[#1e3a5f] px-3 py-2 text-xs font-semibold text-white hover:bg-[#162d4a] transition-colors"
+              >
+                <Truck size={12} /> Registrar en almacén
+              </button>
+            )}
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
@@ -378,10 +386,10 @@ export default function RequisitionDetailPage() {
                 <td className={`px-4 py-3 ${d.completado ? 'line-through text-gray-400' : 'text-gray-800'}`}>
                   <div className="flex flex-col gap-1">
                     <span className="font-medium">{d.producto?.nombre}</span>
-                    <span className="text-[11px] text-gray-500">Unidad: {d.producto?.unidad_medida ?? 'UND'}</span>
+                    <span className="text-[11px] text-gray-500">Unidad: {unidadMedidaLabel(d.producto?.unidad_medida ?? 'UND')}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 text-gray-400 text-xs">{d.producto?.unidad_medida ?? 'UND'}</td>
+                <td className="px-4 py-3 text-gray-400 text-xs">{unidadMedidaLabel(d.producto?.unidad_medida ?? 'UND')}</td>
                 <td className="px-4 py-3 font-bold text-center text-gray-700">{d.cantidad}</td>
                 <td className="px-4 py-3">
                   {d.proveedor_sugerido ? (
@@ -398,7 +406,7 @@ export default function RequisitionDetailPage() {
                       <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full">
                         <CheckCircle2 size={10} /> Recibido
                       </span>
-                      {!['COMPLETADA', 'RECHAZADA'].includes(req.estado) && (
+                      {isWarehouseUser && !['COMPLETADA', 'RECHAZADA'].includes(req.estado) && (
                         <button
                           onClick={() => marcarItem.mutate({ itemId: d.id, requisicionId: req.id, completado: false })}
                           className="text-[10px] text-gray-400 hover:text-red-500 transition-colors"
@@ -407,7 +415,7 @@ export default function RequisitionDetailPage() {
                       )}
                     </div>
                   ) : (
-                    ['EN_COMPRA', 'PARCIAL', 'APROBADA'].includes(req.estado) ? (
+                    isWarehouseUser && ['EN_COMPRA', 'PARCIAL', 'APROBADA'].includes(req.estado) ? (
                       <button
                         disabled={marcarItem.isPending}
                         onClick={() => marcarItem.mutate({ itemId: d.id, requisicionId: req.id, completado: true })}
@@ -510,6 +518,30 @@ export default function RequisitionDetailPage() {
                 />
               </label>
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Dirección de despacho</label>
+                <input
+                  value={warehouseDirection}
+                  onChange={(e) => setWarehouseDirection(e.target.value)}
+                  placeholder="Ej: Almacén central, bodega 3"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Productos despachados</label>
+                <input
+                  type="number"
+                  value={warehouseDispatchCount}
+                  min={1}
+                  max={req.detalles?.length ?? 0}
+                  onChange={(e) => setWarehouseDispatchCount(Number(e.target.value))}
+                  placeholder="Cantidad"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+                />
+                <p className="text-[11px] text-gray-500 mt-1">Total de ítems en la requisición: {req.detalles?.length ?? 0}</p>
+              </div>
+            </div>
             <textarea
               rows={4}
               value={warehouseNote}
@@ -534,7 +566,12 @@ export default function RequisitionDetailPage() {
         }}
         variant="primary"
         loading={warehouseVerdict.isPending}
-        confirmDisabled={!warehouseDirection.trim() || warehouseDispatchCount <= 0}
+        confirmDisabled={
+          !warehouseDirection.trim() ||
+          warehouseDispatchCount <= 0 ||
+          warehouseDispatchCount > (req.detalles?.length ?? 0) ||
+          (warehouseState === 'COMPLETADA' && warehouseDispatchCount !== (req.detalles?.length ?? 0))
+        }
       />
     </div>
   )

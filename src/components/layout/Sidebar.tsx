@@ -41,6 +41,7 @@ const superAdminLinks = [
 const warehouseLinks = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/almacen', icon: Truck, label: 'Almacén' },
+  { to: '/admin/almacen/llegadas', icon: ListOrdered, label: 'Llegadas' },
   { to: '/admin/requisiciones', icon: ClipboardList, label: 'Requisiciones' },
 ]
 

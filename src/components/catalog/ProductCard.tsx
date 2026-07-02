@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, Check, Tag, ChevronDown, ChevronUp, TrendingDown } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { useCart } from '@/hooks/useCart'
-import { formatCOP } from '@/lib/utils'
+import { formatCOP, unidadMedidaLabel } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import type { Producto } from '@/types'
 
@@ -83,7 +83,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <div>
               <div className="flex items-baseline gap-1">
                 <p className="text-base font-bold text-[#1e3a5f]">{formatCOP(product.precio_minimo)}</p>
-                <span className="text-[10px] text-gray-400">/{product.unidad_medida}</span>
+                <span className="text-[10px] text-gray-400">/{unidadMedidaLabel(product.unidad_medida)}</span>
               </div>
               {product.proveedor_mas_barato && (
                 <p className="text-[10px] text-emerald-600 font-medium truncate flex items-center gap-0.5 mt-0.5">

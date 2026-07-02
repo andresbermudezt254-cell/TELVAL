@@ -4,6 +4,10 @@
 -- ============================================================
 
 -- 1. Agregar nuevos valores al ENUM estado_requisicion
+ALTER TYPE estado_requisicion ADD VALUE IF NOT EXISTS 'EN_ALMACEN';
+ALTER TYPE estado_requisicion ADD VALUE IF NOT EXISTS 'DESPACHADO';
+ALTER TYPE estado_requisicion ADD VALUE IF NOT EXISTS 'PARCIAL';
+
 ALTER TABLE requisiciones
   DROP CONSTRAINT IF EXISTS requisiciones_estado_check;
 

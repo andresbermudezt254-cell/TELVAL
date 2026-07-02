@@ -8,7 +8,7 @@ import { OrderTimeline as Timeline } from '@/components/requisitions/Timeline'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
 import { PageLoader } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { formatDate } from '@/lib/utils'
+import { formatDate, unidadMedidaLabel } from '@/lib/utils'
 import type { EstadoRequisicion } from '@/types'
 
 const ESTADOS: { label: string; value: EstadoRequisicion | 'all' }[] = [
@@ -87,7 +87,7 @@ function DetailModal({ id, open, onClose }: { id: number; open: boolean; onClose
                         <td className="px-3 py-2 text-xs font-mono text-gray-500">{item.producto?.codigo ?? '—'}</td>
                         <td className="px-3 py-2 text-sm text-gray-700">{item.producto?.nombre ?? 'Sin producto'}</td>
                         <td className="px-3 py-2 text-sm text-gray-700">{item.cantidad}</td>
-                        <td className="px-3 py-2 text-sm text-gray-700">{item.producto?.unidad_medida ?? 'UND'}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{unidadMedidaLabel(item.producto?.unidad_medida ?? 'UND')}</td>
                         <td className="px-3 py-2 text-sm text-gray-700">{item.proveedor_sugerido?.nombre ?? 'Sin proveedor'}</td>
                       </tr>
                     ))}

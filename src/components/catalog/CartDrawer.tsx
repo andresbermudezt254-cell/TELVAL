@@ -1,7 +1,7 @@
 import { X, Minus, Plus, ShoppingCart, ArrowRight, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/hooks/useCart'
-import { formatCOP } from '@/lib/utils'
+import { formatCOP, unidadMedidaLabel } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -66,7 +66,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{producto.nombre}</p>
-                    <p className="text-xs text-gray-500">{producto.unidad_medida} · {producto.codigo}</p>
+                    <p className="text-xs text-gray-500">{unidadMedidaLabel(producto.unidad_medida)} · {producto.codigo}</p>
                     {producto.precio_minimo && (
                       <p className="text-xs font-semibold text-[#1e3a5f]">
                         {formatCOP(producto.precio_minimo * cantidad)}
