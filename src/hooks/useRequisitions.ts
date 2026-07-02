@@ -17,7 +17,7 @@ export function useRequisitions(filters?: {
   const pageSize = 20
 
   const queryFn = async (): Promise<{ data: Requisicion[]; count: number }> => {
-    let query = supabase
+    let query: any = supabase
       .from('requisiciones')
       .select(`
         *,
@@ -41,12 +41,12 @@ export function useRequisitions(filters?: {
     const { data, error, count } = await query
     if (error) {
       const invalidEnumMatch = error.message?.matchAll(/"([^"]+)"/g)
-      const invalidEnums = invalidEnumMatch ? Array.from(invalidEnumMatch, (m) => m[1]) : []
+      const invalidEnums = invalidEnumMatch ? Array.from(invalidEnumMatch, (m: RegExpMatchArray) => m[1]) : []
       if (error.code === '22P02' && filters?.estado && invalidEnums.length > 0) {
         const requestedEstados = Array.isArray(filters.estado) ? filters.estado : [filters.estado]
         const validEstados = requestedEstados.filter((estado) => !invalidEnums.includes(estado))
         if (validEstados.length > 0) {
-          let retryQuery = supabase
+          let retryQuery: any = supabase
             .from('requisiciones')
             .select(`
         *,
@@ -408,25 +408,26 @@ export function useChangeDetalleProveedor() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ detalleId, proveedorId }: { detalleId: number; proveedorId: number | null }) => {
+    mutationFn: async ({ detalleId, proveedorId, requisicionId }: { detalleId: number; proveedorId: number | null; requisicionId?: number }) => {
       const { error } = await supabase
         .from('detalle_requisicion')
         .update({ proveedor_sugerido_id: proveedorId })
         .eq('id', detalleId)
       if (error) throw error
+      return { detalleId, proveedorId, requisicionId }
     },
     // Optimistic update: update cached order-summary and requisition immediately
     onMutate: async (vars: any) => {
       await queryClient.cancelQueries({ queryKey: ['order-summary'] })
       await queryClient.cancelQueries({ queryKey: ['requisition', vars.requisicionId] })
 
-      const previousOrderSummaries = queryClient.getQueriesData(['order-summary'])
+      const previousOrderSummaries = queryClient.getQueriesData({ queryKey: ['order-summary'] })
       const previousRequisition = queryClient.getQueryData(['requisition', vars.requisicionId])
       const suppliersCache = queryClient.getQueryData(['suppliers', '']) || queryClient.getQueryData(['suppliers'])
       const newSupplier = Array.isArray(suppliersCache) ? (suppliersCache as any[]).find((s) => s.id === vars.proveedorId) : undefined
 
       // Update all cached order-summary queries
-      const summaries = queryClient.getQueriesData(['order-summary'])
+      const summaries = queryClient.getQueriesData({ queryKey: ['order-summary'] })
       summaries.forEach(([key, data]: any) => {
         if (!data) return
         const items = (data as any[])

@@ -1,7 +1,10 @@
-import type { Request } from 'express';
+type SyncUsersResponse = {
+  status: (code: number) => SyncUsersResponse
+  json: (payload: unknown) => void
+}
 
 // Temporary endpoint to sync auth.users to public.usuarios
-export async function syncAuthUsers(req: Request, res: any) {
+export async function syncAuthUsers(_req: unknown, res: SyncUsersResponse) {
   try {
     // This would normally be called from a backend with service role
     // For now, we'll return instructions for manual execution
