@@ -16,6 +16,50 @@ import { Users, Plus, Edit2, ShieldCheck, UserX, UserCheck, AlertTriangle, KeyRo
 import { toast } from 'sonner'
 import type { Usuario } from '@/types'
 
+function getAdminApiUrl() {
+  const configuredUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)?.trim()
+  if (configuredUrl) return configuredUrl
+
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:4000'
+  }
+
+  throw new Error('VITE_ADMIN_API_URL no está configurada para este entorno')
+}
+
+async function parseJsonResponse(resp: Response) {
+  const text = await resp.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+async function postToAdminApi(path: string, payload: unknown) {
+  const adminApiUrl = getAdminApiUrl()
+
+  let resp: Response
+  try {
+    resp = await fetch(`${adminApiUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {
+    throw new Error(`No se pudo conectar con Admin API (${adminApiUrl})`)
+  }
+
+  const body = await parseJsonResponse(resp)
+  if (!resp.ok) {
+    throw new Error((body as { error?: string } | null)?.error || `Admin API respondió ${resp.status}`)
+  }
+
+  return body
+}
+
 /* â”€â”€â”€ hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function useUsers() {
   return useQuery<Usuario[]>({
@@ -91,15 +135,7 @@ function useCreateUser() {
         return newAuthUser.user
       }
 
-      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string) || 'http://localhost:4000'
-      const resp = await fetch(`${adminApiUrl}/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const body = await resp.json()
-      if (!resp.ok) throw new Error(body?.error || 'Error creating user')
-      return body
+      return await postToAdminApi('/users', form)
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Usuario creado exitosamente') },
     onError: (e) => toast.error('Error al crear usuario: ' + (e as Error).message),
@@ -118,14 +154,7 @@ function useResetPassword() {
         return
       }
 
-      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string) || 'http://localhost:4000'
-      const resp = await fetch(`${adminApiUrl}/users/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, password }),
-      })
-      const body = await resp.json()
-      if (!resp.ok) throw new Error(body?.error || 'Error al restablecer contraseña')
+      await postToAdminApi('/users/reset-password', { id, password })
     },
     onSuccess: () => toast.success('Contraseña actualizada. El usuario ya puede ingresar.'),
     onError: (e) => toast.error('Error: ' + (e as Error).message),
