@@ -68,6 +68,12 @@ export async function verificarOTP(userId: string, codigo: string): Promise<bool
     .maybeSingle()
 
   if (error || !data) return false
+
+  if (
+    (typeof data.id !== 'string' && typeof data.id !== 'number') ||
+    (typeof data.expires_at !== 'string' && typeof data.expires_at !== 'number')
+  ) return false
+
   if (new Date(data.expires_at) < new Date()) return false
 
   await supabaseAdmin

@@ -11,6 +11,28 @@ export function formatCOP(value: number | undefined | null): string {
   }).format(value)
 }
 
+/** Devuelve una etiqueta legible para una unidad de medida. */
+export function unidadMedidaLabel(unidad: string): string {
+  const labels: Record<string, string> = {
+    UND: 'unidad',
+    UN: 'unidad',
+    M: 'metro',
+    MT: 'metro',
+    M2: 'metro cuadrado',
+    M3: 'metro cúbico',
+    KG: 'kilogramo',
+    G: 'gramo',
+    L: 'litro',
+    ML: 'mililitro',
+    PAR: 'par',
+    CAJA: 'caja',
+    ROLLO: 'rollo',
+  }
+
+  const normalized = unidad.trim().toUpperCase()
+  return labels[normalized] ?? unidad
+}
+
 /**
  * Formatea una fecha ISO a formato colombiano: 15/05/2024
  */
