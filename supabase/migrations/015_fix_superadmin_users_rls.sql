@@ -1,12 +1,25 @@
 -- Permite que admin y superadmin consulten y administren todos los usuarios.
--- Antes, las politicas solo contemplaban el rol admin; al cambiar el usuario
--- actual a superadmin, la consulta devolvia unicamente su propio registro.
+-- En la base existente, usuarios.id es bigint y auth.uid() es uuid; por eso
+-- se usa el correo, que existe en Auth y en public.usuarios.
+
+CREATE OR REPLACE FUNCTION public.current_user_role()
+RETURNS user_role
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT rol
+  FROM public.usuarios
+  WHERE email = auth.email()
+  LIMIT 1;
+$$;
 
 DROP POLICY IF EXISTS "usuarios_self_read" ON public.usuarios;
 CREATE POLICY "usuarios_self_read" ON public.usuarios
   FOR SELECT
   USING (
-    auth.uid() = id
+    email = auth.email()
     OR public.current_user_role()::text IN ('admin', 'superadmin')
   );
 
