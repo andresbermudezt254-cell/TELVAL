@@ -176,6 +176,60 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  if (req.url === '/requisitions/delete' && req.method === 'POST') {
+    try {
+      const authorization = req.headers.authorization
+      const accessToken = authorization?.startsWith('Bearer ')
+        ? authorization.slice('Bearer '.length)
+        : null
+      if (!accessToken) return sendJSON(res, 401, { error: 'Sesión requerida' })
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
+      if (authError || !authData.user?.email) return sendJSON(res, 401, { error: 'Sesión inválida' })
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('usuarios')
+        .select('*')
+        .eq('email', authData.user.email)
+        .maybeSingle()
+      if (profileError) return sendJSON(res, 500, { error: profileError.message })
+
+      const currentRole = profile
+        ? (profile.rol ?? profile.role ?? profile.user_role ?? profile.tipo_usuario)
+        : null
+      if (currentRole !== 'admin' && currentRole !== 'superadmin') {
+        return sendJSON(res, 403, { error: 'No tienes permisos para eliminar requisiciones' })
+      }
+
+      let body = ''
+      for await (const chunk of req) body += chunk
+      const { id } = JSON.parse(body)
+      if (!id) return sendJSON(res, 400, { error: 'No se recibió la requisición' })
+
+      const { data: requisicion, error: requisicionError } = await supabaseAdmin
+        .from('requisiciones')
+        .select('id, estado')
+        .eq('id', id)
+        .maybeSingle()
+      if (requisicionError) return sendJSON(res, 500, { error: requisicionError.message })
+      if (!requisicion) return sendJSON(res, 404, { error: 'Requisición no encontrada' })
+      if (requisicion.estado !== 'RECHAZADA') {
+        return sendJSON(res, 400, { error: 'Solo se pueden eliminar requisiciones rechazadas' })
+      }
+
+      const { error: deleteError } = await supabaseAdmin
+        .from('requisiciones')
+        .delete()
+        .eq('id', id)
+        .eq('estado', 'RECHAZADA')
+      if (deleteError) return sendJSON(res, 500, { error: deleteError.message })
+
+      return sendJSON(res, 200, { success: true })
+    } catch (e) {
+      return sendJSON(res, 500, { error: (e instanceof Error) ? e.message : String(e) })
+    }
+  }
+
   sendJSON(res, 404, { error: 'Not found' })
 })
 

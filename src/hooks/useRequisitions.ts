@@ -739,6 +739,40 @@ export function useDeleteDetalleRequisicion() {
   })
 }
 
+export function useDeleteRequisition() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (requisicionId: number) => {
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)
+        || (import.meta.env.DEV ? 'http://localhost:4000' : undefined)
+      if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
+
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('La sesión ha expirado. Vuelve a iniciar sesión')
+
+      const response = await fetch(`${adminApiUrl.replace(/\/$/, '')}/requisitions/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ id: requisicionId }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(result.error ?? 'No se pudo eliminar la requisición')
+    },
+    onSuccess: (_, requisicionId) => {
+      queryClient.removeQueries({ queryKey: ['requisition', requisicionId] })
+      queryClient.invalidateQueries({ queryKey: ['requisitions'] })
+      queryClient.invalidateQueries({ queryKey: ['order-summary'] })
+      toast.success('Requisición eliminada')
+    },
+    onError: (error) => toast.error(`Error al eliminar la requisición: ${(error as Error).message}`),
+  })
+}
+
 export function useUpdateProveedorFinal() {
   const queryClient = useQueryClient()
 

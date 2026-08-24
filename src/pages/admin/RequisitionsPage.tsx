@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle2, ShoppingCart, XCircle, ChevronRight, RotateCcw, PackageCheck, Plus } from 'lucide-react'
-import { useRequisitions, useUpdateRequisitionStatus } from '@/hooks/useRequisitions'
+import { Clock, CheckCircle2, ShoppingCart, XCircle, ChevronRight, RotateCcw, PackageCheck, Plus, Trash2 } from 'lucide-react'
+import { useRequisitions, useUpdateRequisitionStatus, useDeleteRequisition } from '@/hooks/useRequisitions'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
 import { CategoryBadge } from '@/components/requisitions/CategoryBadge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -40,11 +40,13 @@ export default function RequisitionsPage() {
     id: number; codigo: string; action: 'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA'
   } | null>(null)
   const [comentario, setComentario] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; codigo: string } | null>(null)
 
   const { data: result, isLoading } = useRequisitions({ estado: estadoFilter, categoria: categoriaFilter, page })
   const requisitions = result?.data ?? []
   const total = result?.count ?? 0
   const updateStatus = useUpdateRequisitionStatus()
+  const deleteRequisition = useDeleteRequisition()
 
   const handleConfirm = async () => {
     if (!confirmAction) return
@@ -194,6 +196,15 @@ export default function RequisitionsPage() {
                             Completar
                           </button>
                         )}
+                        {req.estado === 'RECHAZADA' && (
+                          <button
+                            onClick={() => setDeleteTarget({ id: req.id, codigo: req.codigo })}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-50 transition-colors"
+                            title="Eliminar requisición rechazada"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-3 py-3.5">
@@ -245,6 +256,19 @@ export default function RequisitionsPage() {
         confirmLabel={actionLabel[confirmAction?.action ?? '']}
         variant={confirmAction?.action === 'RECHAZADA' ? 'danger' : 'primary'}
         loading={updateStatus.isPending}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={() => { if (!deleteRequisition.isPending) setDeleteTarget(null) }}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await deleteRequisition.mutateAsync(deleteTarget.id)
+          setDeleteTarget(null)
+        }}
+        title="Eliminar requisición"
+        message={<>¿Seguro que deseas eliminar la requisición <strong>{deleteTarget?.codigo}</strong>? Esta acción no se puede deshacer.</>}
+        confirmLabel="Eliminar definitivamente"
+        loading={deleteRequisition.isPending}
       />
     </div>
   )
