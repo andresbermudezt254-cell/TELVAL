@@ -32,8 +32,17 @@ export const useAuthStore = create<AuthState>()(
           return { error: error.message }
         }
         if (data.user) {
-          await get().loadProfile(data.user.id)
+          try {
+            await get().loadProfile(data.user.id)
+          } catch (profileError) {
+            await supabase.auth.signOut()
+            return { error: 'No se pudo cargar tu perfil. Contacta al administrador: ' + (profileError as Error).message }
+          }
           const profile = useAuthStore.getState().user
+          if (!profile) {
+            await supabase.auth.signOut()
+            return { error: 'Tu cuenta no tiene un perfil registrado en el sistema. Contacta al administrador.' }
+          }
           if (profile && !profile.activo) {
             await supabase.auth.signOut()
             set({ user: null, session: false })
@@ -50,11 +59,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadProfile: async (userId) => {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('usuarios')
           .select('*')
           .eq('id', userId)
           .single()
+        if (error && error.code !== 'PGRST116') throw error
         if (data && data.activo === false) {
           await supabase.auth.signOut()
           set({ user: null, session: false })
