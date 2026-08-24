@@ -27,7 +27,7 @@ $$;
 CREATE POLICY "usuarios_self_read" ON public.usuarios
   FOR SELECT
   USING (
-    to_jsonb(public.usuarios)->>'email' = auth.email()
+    to_jsonb(usuarios)->>'email' = auth.email()
     OR public.current_user_role_text() IN ('admin', 'superadmin')
   );
 
