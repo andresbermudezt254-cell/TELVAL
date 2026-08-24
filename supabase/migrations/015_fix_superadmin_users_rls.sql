@@ -1,6 +1,7 @@
 -- Permite que admin y superadmin consulten y administren todos los usuarios.
--- En la base existente, usuarios.id es bigint y auth.uid() es uuid; por eso
--- se usa el correo, que existe en Auth y en public.usuarios.
+-- La base existente no coincide con el esquema original: id puede ser bigint
+-- y el nombre de la columna del rol puede variar. Se lee el registro como
+-- JSON para evitar referencias directas a columnas ausentes.
 
 DROP POLICY IF EXISTS "usuarios_self_read" ON public.usuarios;
 DROP POLICY IF EXISTS "usuarios_admin_write" ON public.usuarios;
@@ -12,16 +13,21 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT rol
-  FROM public.usuarios
-  WHERE email = auth.email()
+  SELECT COALESCE(
+    to_jsonb(u)->>'rol',
+    to_jsonb(u)->>'role',
+    to_jsonb(u)->>'user_role',
+    to_jsonb(u)->>'tipo_usuario'
+  )
+  FROM public.usuarios AS u
+  WHERE to_jsonb(u)->>'email' = auth.email()
   LIMIT 1;
 $$;
 
 CREATE POLICY "usuarios_self_read" ON public.usuarios
   FOR SELECT
   USING (
-    email = auth.email()
+    to_jsonb(public.usuarios)->>'email' = auth.email()
     OR public.current_user_role_text() IN ('admin', 'superadmin')
   );
 
