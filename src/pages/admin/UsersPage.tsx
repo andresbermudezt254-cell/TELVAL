@@ -122,7 +122,7 @@ function useResetPassword() {
 function useDeleteUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, email }: { id: string; email: string }) => {
       const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)
         || (import.meta.env.DEV ? 'http://localhost:4000' : undefined)
       if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
@@ -137,7 +137,7 @@ function useDeleteUser() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, email }),
       })
       const result = await response.json().catch(() => ({})) as { error?: string }
       if (!response.ok) throw new Error(result.error ?? 'No se pudo eliminar el usuario')
@@ -500,7 +500,7 @@ export default function UsersPage() {
         onClose={() => { if (!removeUser.isPending) setDeleteUser(null) }}
         onConfirm={async () => {
           if (!deleteUser) return
-            await removeUser.mutateAsync(deleteUser.email)
+            await removeUser.mutateAsync({ id: deleteUser.id, email: deleteUser.email })
           setDeleteUser(null)
         }}
         title="Eliminar usuario"

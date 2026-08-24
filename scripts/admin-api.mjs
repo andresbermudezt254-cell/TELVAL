@@ -149,16 +149,23 @@ const server = http.createServer(async (req, res) => {
 
       let body = ''
       for await (const chunk of req) body += chunk
-      const { email } = JSON.parse(body)
-      if (!email || email.toLowerCase() === authData.user.email.toLowerCase()) {
-        return sendJSON(res, 400, { error: 'Correo inválido o no puedes eliminar tu propia cuenta' })
+      const { id, email } = JSON.parse(body)
+      const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : null
+      const currentEmail = authData.user.email?.trim().toLowerCase()
+      if (!id && !normalizedEmail) return sendJSON(res, 400, { error: 'No se recibió el usuario que deseas eliminar' })
+      if (normalizedEmail && normalizedEmail === currentEmail) {
+        return sendJSON(res, 400, { error: 'No puedes eliminar tu propia cuenta' })
       }
 
       const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
       if (listError) return sendJSON(res, 500, { error: listError.message })
 
-      const targetUser = usersData.users.find((user) => user.email?.toLowerCase() === email.toLowerCase())
+      const targetUser = usersData.users.find((user) =>
+        (id && user.id === id) ||
+        (normalizedEmail && user.email?.trim().toLowerCase() === normalizedEmail)
+      )
       if (!targetUser) return sendJSON(res, 404, { error: 'No se encontró la cuenta de Auth para ese correo' })
+      if (targetUser.id === authData.user.id) return sendJSON(res, 400, { error: 'No puedes eliminar tu propia cuenta' })
 
       const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(targetUser.id)
       if (deleteError) return sendJSON(res, 500, { error: deleteError.message })
