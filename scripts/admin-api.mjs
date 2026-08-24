@@ -104,7 +104,7 @@ const server = http.createServer(async (req, res) => {
       const { error: updErr } = await supabaseAdmin
         .from('usuarios')
         .upsert(
-          { id: newUser.user.id, nombre_completo, rol, especialidad, whatsapp },
+          { id: newUser.user.id, email, nombre_completo, rol, especialidad, whatsapp },
           { onConflict: 'id' }
         )
 
