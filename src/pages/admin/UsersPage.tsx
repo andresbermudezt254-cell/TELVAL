@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -65,33 +65,24 @@ function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (form: UsuarioCreateForm) => {
-      if (!supabaseAdmin) {
-        throw new Error('Service Role Key no configurado. Agrega VITE_SUPABASE_SERVICE_ROLE_KEY en el archivo .env')
-      }
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)
+        || (import.meta.env.DEV ? 'http://localhost:4000' : undefined)
+      if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
 
-      // Crear usuario en Auth con la clave de admin (sin cambiar la sesión activa)
-      const { data: newAuthUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
-        email: form.email,
-        password: form.password,
-        email_confirm: true, // sin necesidad de confirmar email
-        user_metadata: { nombre_completo: form.nombre_completo },
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('La sesión ha expirado. Vuelve a iniciar sesión')
+
+      const response = await fetch(`${adminApiUrl.replace(/\/$/, '')}/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(form),
       })
-      if (signUpError) throw signUpError
-      if (!newAuthUser.user) throw new Error('No se pudo crear el usuario')
-
-      // Actualizar el perfil creado por el trigger de la base de datos
-      const { error: updateError } = await supabase
-        .from('usuarios')
-        .update({
-          nombre_completo: form.nombre_completo,
-          rol: form.rol,
-          especialidad: form.especialidad || null,
-          whatsapp: form.whatsapp || null,
-        })
-        .eq('id', newAuthUser.user.id)
-      if (updateError) throw updateError
-
-      return newAuthUser.user
+      const result = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(result.error ?? 'No se pudo crear el usuario')
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Usuario creado exitosamente') },
     onError: (e) => toast.error('Error al crear usuario: ' + (e as Error).message),

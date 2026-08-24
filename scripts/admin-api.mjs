@@ -59,6 +59,29 @@ const server = http.createServer(async (req, res) => {
 
   if (req.url === '/users' && req.method === 'POST') {
     try {
+      const authorization = req.headers.authorization
+      const accessToken = authorization?.startsWith('Bearer ')
+        ? authorization.slice('Bearer '.length)
+        : null
+      if (!accessToken) return sendJSON(res, 401, { error: 'Sesión requerida' })
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
+      if (authError || !authData.user?.email) return sendJSON(res, 401, { error: 'Sesión inválida' })
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('usuarios')
+        .select('*')
+        .eq('email', authData.user.email)
+        .maybeSingle()
+      if (profileError) return sendJSON(res, 500, { error: profileError.message })
+
+      const currentRole = profile
+        ? (profile.rol ?? profile.role ?? profile.user_role ?? profile.tipo_usuario)
+        : null
+      if (currentRole !== 'admin' && currentRole !== 'superadmin') {
+        return sendJSON(res, 403, { error: 'No tienes permisos para crear usuarios' })
+      }
+
       let body = ''
       for await (const chunk of req) body += chunk
       const data = JSON.parse(body)
@@ -76,6 +99,7 @@ const server = http.createServer(async (req, res) => {
         user_metadata: { nombre_completo },
       })
       if (createErr) return sendJSON(res, 500, { error: createErr.message })
+      if (!newUser.user) return sendJSON(res, 500, { error: 'No se pudo crear el usuario' })
 
       const { error: updErr } = await supabaseAdmin
         .from('usuarios')
