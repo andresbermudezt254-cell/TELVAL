@@ -2,26 +2,30 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { Producto, MejorProveedor } from '@/types'
 
+const PAGE_SIZE = 1000
+
 export function useProducts(search = '', categoriaId?: number) {
   return useQuery({
     queryKey: ['products', search, categoriaId],
     queryFn: async () => {
-      let query = supabase
-        .from('productos')
-        .select(`*, categoria:categorias(id, nombre, icono)`)
-        .eq('activo', true)
-        .order('nombre')
+      const products: Producto[] = []
+      for (let page = 0; ; page += 1) {
+        let query = supabase
+          .from('productos')
+          .select(`*, categoria:categorias(id, nombre, icono)`)
+          .eq('activo', true)
+          .order('nombre')
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
 
-      if (search.trim()) {
-        query = query.ilike('nombre', `%${search}%`)
-      }
-      if (categoriaId) {
-        query = query.eq('categoria_id', categoriaId)
-      }
+        if (search.trim()) query = query.ilike('nombre', `%${search}%`)
+        if (categoriaId) query = query.eq('categoria_id', categoriaId)
 
-      const { data, error } = await query
-      if (error) throw error
-      return (data ?? []) as unknown as Producto[]
+        const { data, error } = await query
+        if (error) throw error
+        products.push(...((data ?? []) as unknown as Producto[]))
+        if (!data || data.length < PAGE_SIZE) break
+      }
+      return products
     },
     staleTime: 1000 * 60 * 5,
   })
@@ -39,17 +43,24 @@ export function useProductsWithPrices(search = '', categoriaId?: number) {
   const allProveedoresQuery = useQuery({
     queryKey: ['all-proveedores-by-product'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('proveedor_producto')
-        .select('producto_id, proveedor_id, precio_unitario, proveedores(id, nombre)')
-        .eq('activo', true)
-      if (error) throw error
-      return (data ?? []) as unknown as Array<{
+      const offers: Array<{
         producto_id: number | string
         proveedor_id: number | string
         precio_unitario: number
         proveedores?: { id: number; nombre: string } | Array<{ id: number; nombre: string }>
-      }>
+      }> = []
+
+      for (let page = 0; ; page += 1) {
+        const { data, error } = await supabase
+          .from('proveedor_producto')
+          .select('producto_id, proveedor_id, precio_unitario, proveedores(id, nombre)')
+          .eq('activo', true)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+        if (error) throw error
+        offers.push(...((data ?? []) as unknown as typeof offers))
+        if (!data || data.length < PAGE_SIZE) break
+      }
+      return offers
     },
     staleTime: 1000 * 60 * 5,
   })
