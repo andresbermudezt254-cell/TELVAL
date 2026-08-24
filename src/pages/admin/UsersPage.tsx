@@ -100,12 +100,17 @@ function useCreateUser() {
 function useResetPassword() {
   return useMutation({
     mutationFn: async ({ id, password }: { id: string; password: string }) => {
-      if (!supabaseAdmin) throw new Error('Service Role Key no configurado')
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
-        password,
-        email_confirm: true,
+      const adminApiUrl = import.meta.env.VITE_ADMIN_API_URL as string | undefined
+      if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
+
+      const response = await fetch(`${adminApiUrl.replace(/\/$/, '')}/users/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, password }),
       })
-      if (error) throw error
+
+      const result = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(result.error ?? 'No se pudo actualizar la contraseña')
     },
     onSuccess: () => toast.success('Contraseña actualizada. El usuario ya puede ingresar.'),
     onError: (e) => toast.error('Error: ' + (e as Error).message),
