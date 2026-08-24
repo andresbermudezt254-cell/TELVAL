@@ -14,7 +14,10 @@ const queryClient = new QueryClient({
   },
 })
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')!
+rootElement.setAttribute('translate', 'no')
+
+createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
