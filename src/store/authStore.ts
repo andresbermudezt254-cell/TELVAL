@@ -59,11 +59,17 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loadProfile: async (userId) => {
-        const { data, error } = await supabase
+        const profileQuery = supabase
           .from('usuarios')
           .select('*')
           .eq('id', userId)
           .single()
+        const { data, error } = await Promise.race([
+          profileQuery,
+          new Promise<never>((_, reject) => {
+            window.setTimeout(() => reject(new Error('La consulta del perfil tardó demasiado')), 10000)
+          }),
+        ])
         if (error && error.code !== 'PGRST116') throw error
         if (data && data.activo === false) {
           await supabase.auth.signOut()
