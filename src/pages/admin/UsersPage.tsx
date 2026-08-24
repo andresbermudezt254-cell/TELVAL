@@ -11,8 +11,9 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { PageLoader } from '@/components/ui/Spinner'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { usuarioCreateSchema, usuarioEditSchema, especialidadOptions, type UsuarioCreateForm, type UsuarioEditForm } from '@/lib/validations'
-import { Users, Plus, Edit2, ShieldCheck, UserX, UserCheck, AlertTriangle, KeyRound } from 'lucide-react'
+import { Users, Plus, Edit2, ShieldCheck, UserX, UserCheck, AlertTriangle, KeyRound, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Usuario } from '@/types'
 
@@ -114,6 +115,34 @@ function useResetPassword() {
       if (!response.ok) throw new Error(result.error ?? 'No se pudo actualizar la contraseña')
     },
     onSuccess: () => toast.success('Contraseña actualizada. El usuario ya puede ingresar.'),
+    onError: (e) => toast.error('Error: ' + (e as Error).message),
+  })
+}
+
+function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)
+        || (import.meta.env.DEV ? 'http://localhost:4000' : undefined)
+      if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
+
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) throw new Error('La sesión ha expirado. Vuelve a iniciar sesión')
+
+      const response = await fetch(`${adminApiUrl.replace(/\/$/, '')}/users/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ id }),
+      })
+      const result = await response.json().catch(() => ({})) as { error?: string }
+      if (!response.ok) throw new Error(result.error ?? 'No se pudo eliminar el usuario')
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); toast.success('Usuario eliminado') },
     onError: (e) => toast.error('Error: ' + (e as Error).message),
   })
 }
@@ -310,11 +339,13 @@ export default function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editUser, setEditUser] = useState<Usuario | null>(null)
   const [resetUser, setResetUser] = useState<Usuario | null>(null)
+  const [deleteUser, setDeleteUser] = useState<Usuario | null>(null)
 
   const adminCount = users?.filter((u) => u.rol === 'admin').length ?? 0
   const warehouseCount = users?.filter((u) => u.rol === 'almacen').length ?? 0
   const empleadoCount = users?.filter((u) => u.rol === 'empleado').length ?? 0
   const activeCount = users?.filter((u) => u.activo).length ?? 0
+  const removeUser = useDeleteUser()
 
   if (isLoading) return <PageLoader />
 
@@ -430,18 +461,27 @@ export default function UsersPage() {
                         <KeyRound size={14} />
                       </button>
                       {u.id !== me?.id && (
-                        <button
-                          onClick={() => toggleActive.mutate({ id: u.id, activo: !u.activo })}
-                          disabled={toggleActive.isPending}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            u.activo
-                              ? 'hover:bg-red-50 text-gray-400 hover:text-red-600'
-                              : 'hover:bg-green-50 text-gray-400 hover:text-green-600'
-                          }`}
-                          title={u.activo ? 'Desactivar usuario' : 'Activar usuario'}
-                        >
-                          {u.activo ? <UserX size={14} /> : <UserCheck size={14} />}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => toggleActive.mutate({ id: u.id, activo: !u.activo })}
+                            disabled={toggleActive.isPending}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              u.activo
+                                ? 'hover:bg-red-50 text-gray-400 hover:text-red-600'
+                                : 'hover:bg-green-50 text-gray-400 hover:text-green-600'
+                            }`}
+                            title={u.activo ? 'Desactivar usuario' : 'Activar usuario'}
+                          >
+                            {u.activo ? <UserX size={14} /> : <UserCheck size={14} />}
+                          </button>
+                          <button
+                            onClick={() => setDeleteUser(u)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-700 transition-colors"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
@@ -455,6 +495,19 @@ export default function UsersPage() {
       <CreateUserModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <EditUserModal user={editUser} onClose={() => setEditUser(null)} />
       <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
+      <ConfirmDialog
+        open={!!deleteUser}
+        onClose={() => { if (!removeUser.isPending) setDeleteUser(null) }}
+        onConfirm={async () => {
+          if (!deleteUser) return
+            await removeUser.mutateAsync(deleteUser.email)
+          setDeleteUser(null)
+        }}
+        title="Eliminar usuario"
+        message={<>¿Seguro que deseas eliminar a <strong>{deleteUser?.nombre_completo}</strong>? Esta acción no se puede deshacer.</>}
+        confirmLabel="Eliminar definitivamente"
+        loading={removeUser.isPending}
+      />
     </div>
   )
 }

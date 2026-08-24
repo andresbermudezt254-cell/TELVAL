@@ -41,7 +41,7 @@ function sendJSON(res, status, body) {
     'Content-Length': Buffer.byteLength(payload),
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   })
   res.end(payload)
 }
@@ -51,7 +51,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     })
     res.end()
     return
@@ -115,6 +115,53 @@ const server = http.createServer(async (req, res) => {
         email_confirm: true,
       })
       if (error) return sendJSON(res, 500, { error: error.message })
+
+      return sendJSON(res, 200, { success: true })
+    } catch (e) {
+      return sendJSON(res, 500, { error: (e instanceof Error) ? e.message : String(e) })
+    }
+  }
+
+  if (req.url === '/users/delete' && req.method === 'POST') {
+    try {
+      const authorization = req.headers.authorization
+      const accessToken = authorization?.startsWith('Bearer ')
+        ? authorization.slice('Bearer '.length)
+        : null
+      if (!accessToken) return sendJSON(res, 401, { error: 'Sesión requerida' })
+
+      const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(accessToken)
+      if (authError || !authData.user?.email) return sendJSON(res, 401, { error: 'Sesión inválida' })
+
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('usuarios')
+        .select('*')
+        .eq('email', authData.user.email)
+        .maybeSingle()
+      if (profileError) return sendJSON(res, 500, { error: profileError.message })
+
+      const currentRole = profile
+        ? (profile.rol ?? profile.role ?? profile.user_role ?? profile.tipo_usuario)
+        : null
+      if (currentRole !== 'admin' && currentRole !== 'superadmin') {
+        return sendJSON(res, 403, { error: 'No tienes permisos para eliminar usuarios' })
+      }
+
+      let body = ''
+      for await (const chunk of req) body += chunk
+      const { email } = JSON.parse(body)
+      if (!email || email.toLowerCase() === authData.user.email.toLowerCase()) {
+        return sendJSON(res, 400, { error: 'Correo inválido o no puedes eliminar tu propia cuenta' })
+      }
+
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+      if (listError) return sendJSON(res, 500, { error: listError.message })
+
+      const targetUser = usersData.users.find((user) => user.email?.toLowerCase() === email.toLowerCase())
+      if (!targetUser) return sendJSON(res, 404, { error: 'No se encontró la cuenta de Auth para ese correo' })
+
+      const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(targetUser.id)
+      if (deleteError) return sendJSON(res, 500, { error: deleteError.message })
 
       return sendJSON(res, 200, { success: true })
     } catch (e) {
