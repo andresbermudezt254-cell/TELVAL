@@ -109,6 +109,7 @@ const server = http.createServer(async (req, res) => {
         )
 
       if (updErr) {
+        await supabaseAdmin.auth.admin.deleteUser(newUser.user.id)
         if (updErr.message?.includes('invalid input value for enum user_role')) {
           return sendJSON(res, 422, {
             error: 'Rol inválido en la base de datos. Ejecuta la migración para agregar el valor almacen al enum user_role.',
