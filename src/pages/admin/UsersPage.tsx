@@ -100,7 +100,8 @@ function useCreateUser() {
 function useResetPassword() {
   return useMutation({
     mutationFn: async ({ id, password }: { id: string; password: string }) => {
-      const adminApiUrl = import.meta.env.VITE_ADMIN_API_URL as string | undefined
+      const adminApiUrl = (import.meta.env.VITE_ADMIN_API_URL as string | undefined)
+        || (import.meta.env.DEV ? 'http://localhost:4000' : undefined)
       if (!adminApiUrl) throw new Error('La API administrativa no está configurada')
 
       const response = await fetch(`${adminApiUrl.replace(/\/$/, '')}/users/reset-password`, {
