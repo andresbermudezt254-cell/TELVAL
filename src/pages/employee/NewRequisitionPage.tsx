@@ -74,6 +74,35 @@ function StepBar({ step }: { step: number }) {
   )
 }
 
+const sincoAdproOptions = [
+  { value: '1.1.1', label: '1.1.1 - Oficiales' },
+  { value: '1.1.2', label: '1.1.2 - Auxiliar de mantenimiento' },
+  { value: '1.3.1', label: '1.3.1 - Concretos, morteros y cemento' },
+  { value: '1.3.2', label: '1.3.2 - Aceros, mallas y alambres' },
+  { value: '1.3.3', label: '1.3.3 - Estucos, pinturas y aditivos' },
+  { value: '1.3.4', label: '1.3.4 - Material eléctrico' },
+  { value: '1.3.5', label: '1.3.5 - Material hidráulico' },
+  { value: '1.3.6', label: '1.3.6 - Material de ferretería - consumibles' },
+  { value: '1.3.7', label: '1.3.7 - Material de cantera - pavimentos' },
+  { value: '1.3.8', label: '1.3.8 - Sistemas de construcciones livianas' },
+  { value: '1.3.9', label: '1.3.9 - Pisos y enchapes' },
+  { value: '1.3.10', label: '1.3.10 - Cubiertas - impermeabilizaciones' },
+  { value: '1.3.11', label: '1.3.11 - Red de gas' },
+  { value: '1.3.12', label: '1.3.12 - Prefabricados' },
+  { value: '1.3.13', label: '1.3.13 - Neopreno' },
+  { value: '1.3.14', label: '1.3.14 - Cerraduras - chapas' },
+  { value: '1.3.15', label: '1.3.15 - Micropilotes y anclajes' },
+  { value: '1.3.16', label: '1.3.16 - Estudios' },
+  { value: '1.3.17', label: '1.3.17 - Maderas de obra' },
+  { value: '1.4.1.1', label: '1.4.1.1 - Andamios' },
+  { value: '1.4.1.2', label: '1.4.1.2 - Formaleta' },
+  { value: '1.4.1.3', label: '1.4.1.3 - Equipo menor alquiler' },
+  { value: '1.4.2.1', label: '1.4.2.1 - Herramienta y equipo menor (compra)' },
+  { value: '1.5.1', label: '1.5.1 - Transporte de personal' },
+  { value: '1.5.2', label: '1.5.2 - Transporte de material' },
+  { value: '1.5.3', label: '1.5.3 - Combustible' },
+]
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function NewRequisitionPage() {
   const navigate = useNavigate()
@@ -173,7 +202,13 @@ export default function NewRequisitionPage() {
 
               <Input label="Fecha máxima de entrega" type="date" error={errors.fecha_maxima_entrega?.message} {...register('fecha_maxima_entrega')} />
               <Input label="Item PPTO" placeholder="Ej: 23.22" error={errors.item_ppto?.message} {...register('item_ppto')} />
-              <Input label="Item SINCO-ADPRO" placeholder="Ej: 5.4.1.3" error={errors.item_sinco_adpro?.message} {...register('item_sinco_adpro')} />
+              <Select
+                label="Item SINCO-ADPRO"
+                error={errors.item_sinco_adpro?.message}
+                options={sincoAdproOptions}
+                placeholder="Selecciona un código SINCO"
+                {...register('item_sinco_adpro')}
+              />
               <div className="sm:col-span-2">
                 <label className="text-sm font-medium text-gray-700 block mb-1">Notas adicionales</label>
                 <textarea
