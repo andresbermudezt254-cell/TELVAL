@@ -198,6 +198,40 @@ export default function NewRequisitionPage() {
         {/* ── STEP 2 ── */}
         {step === 2 && (
           <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Datos de la requisición</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Especialidad</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.especialidad || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Categoría</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.categoria || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Número de aviso</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.numero_aviso || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Punto</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.punto || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Fecha máxima</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.fecha_maxima_entrega || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-gray-400">Item PPTO</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.item_ppto || '—'}</span>
+                </div>
+                <div className="flex justify-between gap-3 sm:col-span-2">
+                  <span className="text-gray-400">Item SINCO-ADPRO</span>
+                  <span className="font-medium text-gray-800 text-right">{formValues.item_sinco_adpro || '—'}</span>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b bg-gradient-to-r from-[#1e3a5f]/5 to-transparent flex items-center justify-between">
                 <div className="flex items-center gap-2">

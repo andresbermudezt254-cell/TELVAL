@@ -186,6 +186,7 @@ export interface NuevaRequisicionForm {
   punto: string
   categoria: CategoriaRequisicion
   fecha_maxima_entrega?: string
+  item_ppto?: string
   item_sinco_adpro?: string
   notas_empleado?: string
   items: Array<{
