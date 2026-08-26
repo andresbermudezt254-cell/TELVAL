@@ -8,6 +8,8 @@ interface CartState {
   removeItem: (productoId: number, proveedorId?: number) => void
   updateCantidad: (productoId: number, cantidad: number, proveedorId?: number) => void
   updateNotas: (productoId: number, notas: string, proveedorId?: number) => void
+  updatePpto: (productoId: number, itemPpto: string, proveedorId?: number) => void
+  updateSinco: (productoId: number, itemSincoAdpro: string, proveedorId?: number) => void
   replaceItems: (items: CartItem[]) => void
   clearCart: () => void
   totalItems: () => number
@@ -66,6 +68,26 @@ export const useCartStore = create<CartState>()(
           items: state.items.map((i) =>
             (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
               ? { ...i, notas }
+              : i
+          ),
+        }))
+      },
+
+      updatePpto: (productoId, itemPpto, proveedorId) => {
+        set((state) => ({
+          items: state.items.map((i) =>
+            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+              ? { ...i, item_ppto: itemPpto }
+              : i
+          ),
+        }))
+      },
+
+      updateSinco: (productoId, itemSincoAdpro, proveedorId) => {
+        set((state) => ({
+          items: state.items.map((i) =>
+            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+              ? { ...i, item_sinco_adpro: itemSincoAdpro }
               : i
           ),
         }))

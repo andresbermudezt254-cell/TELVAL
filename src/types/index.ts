@@ -164,6 +164,8 @@ export interface DetalleRequisicion {
   precio_unitario?: number
   total_linea?: number
   notas?: string
+  item_ppto?: string
+  item_sinco_adpro?: string
   completado: boolean
   completado_at?: string
   completado_por?: string
@@ -178,6 +180,8 @@ export interface CartItem {
   producto: Producto
   cantidad: number
   notas?: string
+  item_ppto?: string
+  item_sinco_adpro?: string
 }
 
 export interface NuevaRequisicionForm {
@@ -187,12 +191,13 @@ export interface NuevaRequisicionForm {
   categoria: CategoriaRequisicion
   fecha_maxima_entrega?: string
   item_ppto?: string
-  item_sinco_adpro?: string
   notas_empleado?: string
   items: Array<{
     producto_id: number
     cantidad: number
     notas?: string
+    item_ppto?: string
+    item_sinco_adpro?: string
   }>
 }
 

@@ -75,39 +75,39 @@ function StepBar({ step }: { step: number }) {
 }
 
 const sincoAdproOptions = [
-  { value: '1.1.1', label: '1.1.1 - Oficiales' },
-  { value: '1.1.2', label: '1.1.2 - Auxiliar de mantenimiento' },
-  { value: '1.3.1', label: '1.3.1 - Concretos, morteros y cemento' },
-  { value: '1.3.2', label: '1.3.2 - Aceros, mallas y alambres' },
-  { value: '1.3.3', label: '1.3.3 - Estucos, pinturas y aditivos' },
-  { value: '1.3.4', label: '1.3.4 - Material eléctrico' },
-  { value: '1.3.5', label: '1.3.5 - Material hidráulico' },
-  { value: '1.3.6', label: '1.3.6 - Material de ferretería - consumibles' },
-  { value: '1.3.7', label: '1.3.7 - Material de cantera - pavimentos' },
-  { value: '1.3.8', label: '1.3.8 - Sistemas de construcciones livianas' },
-  { value: '1.3.9', label: '1.3.9 - Pisos y enchapes' },
-  { value: '1.3.10', label: '1.3.10 - Cubiertas - impermeabilizaciones' },
-  { value: '1.3.11', label: '1.3.11 - Red de gas' },
-  { value: '1.3.12', label: '1.3.12 - Prefabricados' },
-  { value: '1.3.13', label: '1.3.13 - Neopreno' },
-  { value: '1.3.14', label: '1.3.14 - Cerraduras - chapas' },
-  { value: '1.3.15', label: '1.3.15 - Micropilotes y anclajes' },
-  { value: '1.3.16', label: '1.3.16 - Estudios' },
-  { value: '1.3.17', label: '1.3.17 - Maderas de obra' },
-  { value: '1.4.1.1', label: '1.4.1.1 - Andamios' },
-  { value: '1.4.1.2', label: '1.4.1.2 - Formaleta' },
-  { value: '1.4.1.3', label: '1.4.1.3 - Equipo menor alquiler' },
-  { value: '1.4.2.1', label: '1.4.2.1 - Herramienta y equipo menor (compra)' },
-  { value: '1.5.1', label: '1.5.1 - Transporte de personal' },
-  { value: '1.5.2', label: '1.5.2 - Transporte de material' },
-  { value: '1.5.3', label: '1.5.3 - Combustible' },
+  { value: '1.1', label: '1.1 - Oficiales' },
+  { value: '1.2', label: '1.2 - Auxiliar de mantenimiento' },
+  { value: '3.1', label: '3.1 - Concretos, morteros y cemento' },
+  { value: '3.2', label: '3.2 - Aceros, mallas y alambres' },
+  { value: '3.3', label: '3.3 - Estucos, pinturas y aditivos' },
+  { value: '3.4', label: '3.4 - Material eléctrico' },
+  { value: '3.5', label: '3.5 - Material hidráulico' },
+  { value: '3.6', label: '3.6 - Material de ferretería - consumibles' },
+  { value: '3.7', label: '3.7 - Material de cantera - pavimentos' },
+  { value: '3.8', label: '3.8 - Sistemas de construcciones livianas' },
+  { value: '3.9', label: '3.9 - Pisos y enchapes' },
+  { value: '3.10', label: '3.10 - Cubiertas - impermeabilizaciones' },
+  { value: '3.11', label: '3.11 - Red de gas' },
+  { value: '3.12', label: '3.12 - Prefabricados' },
+  { value: '3.13', label: '3.13 - Neopreno' },
+  { value: '3.14', label: '3.14 - Cerraduras - chapas' },
+  { value: '3.15', label: '3.15 - Micropilotes y anclajes' },
+  { value: '3.16', label: '3.16 - Estudios' },
+  { value: '3.17', label: '3.17 - Maderas de obra' },
+  { value: '4.1.1', label: '4.1.1 - Andamios' },
+  { value: '4.1.2', label: '4.1.2 - Formaleta' },
+  { value: '4.1.3', label: '4.1.3 - Equipo menor alquiler' },
+  { value: '4.2.1', label: '4.2.1 - Herramienta y equipo menor (compra)' },
+  { value: '5.1', label: '5.1 - Transporte de personal' },
+  { value: '5.2', label: '5.2 - Transporte de material' },
+  { value: '5.3', label: '5.3 - Combustible' },
 ]
 
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function NewRequisitionPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const { items, removeItem, updateCantidad, clearCart, totalEstimado } = useCart()
+  const { items, removeItem, updateCantidad, updatePpto, updateSinco, clearCart, totalEstimado } = useCart()
   const createMutation = useCreateRequisition()
 
   const productIds = items.map((i) => i.producto.id)
@@ -136,6 +136,8 @@ export default function NewRequisitionPage() {
         producto_id: i.producto.id,
         cantidad: i.cantidad,
         notas: i.notas,
+        item_ppto: i.item_ppto,
+        item_sinco_adpro: i.item_sinco_adpro,
       })),
     })
     clearCart()
@@ -201,14 +203,6 @@ export default function NewRequisitionPage() {
               </div>
 
               <Input label="Fecha máxima de entrega" type="date" error={errors.fecha_maxima_entrega?.message} {...register('fecha_maxima_entrega')} />
-              <Input label="Item PPTO" placeholder="Ej: 23.22" error={errors.item_ppto?.message} {...register('item_ppto')} />
-              <Select
-                label="Item SINCO-ADPRO"
-                error={errors.item_sinco_adpro?.message}
-                options={sincoAdproOptions}
-                placeholder="Selecciona un código SINCO"
-                {...register('item_sinco_adpro')}
-              />
               <div className="sm:col-span-2">
                 <label className="text-sm font-medium text-gray-700 block mb-1">Notas adicionales</label>
                 <textarea
@@ -256,14 +250,6 @@ export default function NewRequisitionPage() {
                   <span className="text-gray-400">Fecha máxima</span>
                   <span className="font-medium text-gray-800 text-right">{formValues.fecha_maxima_entrega || '—'}</span>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-400">Item PPTO</span>
-                  <span className="font-medium text-gray-800 text-right">{formValues.item_ppto || '—'}</span>
-                </div>
-                <div className="flex justify-between gap-3 sm:col-span-2">
-                  <span className="text-gray-400">Item SINCO-ADPRO</span>
-                  <span className="font-medium text-gray-800 text-right">{formValues.item_sinco_adpro || '—'}</span>
-                </div>
               </div>
             </div>
 
@@ -279,7 +265,7 @@ export default function NewRequisitionPage() {
               </div>
 
               <div className="divide-y divide-gray-100">
-                {items.map(({ producto, cantidad }) => {
+                {items.map(({ producto, cantidad, item_ppto, item_sinco_adpro }) => {
                   const best = bestSuppliers?.get(producto.id)
                   const unitPrice = best?.precio_unitario ?? (producto as any).precio_minimo
                   const lineTotal = unitPrice ? unitPrice * cantidad : null
@@ -294,6 +280,22 @@ export default function NewRequisitionPage() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 text-sm">{producto.nombre}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{producto.codigo} · {producto.unidad_medida}</p>
+
+                          <div className="mt-3 max-w-md">
+                            <Input
+                              label="Item PPTO"
+                              placeholder="Ej: 23.22"
+                              value={item_ppto ?? ''}
+                              onChange={(event) => updatePpto(producto.id, event.target.value, producto.proveedor_id)}
+                            />
+                            <Select
+                              label="Item SINCO-ADPRO"
+                              options={sincoAdproOptions}
+                              placeholder="Selecciona un código SINCO"
+                              value={item_sinco_adpro ?? ''}
+                              onChange={(event) => updateSinco(producto.id, event.target.value, producto.proveedor_id)}
+                            />
+                          </div>
 
                           {best ? (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">

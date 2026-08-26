@@ -338,7 +338,7 @@ export default function RequisitionDetailPage() {
             </colgroup>
             <thead>
               <tr className="bg-gray-50 border-b">
-                {['#', 'Código', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'P. Unitario', 'Total', 'Recibido', 'Acciones'].map((h) => (
+                {['#', 'Código', 'Producto', 'UM', 'Cant.', 'Proveedor sugerido', 'PPTO', 'SINCO-ADPRO', 'P. Unitario', 'Total', 'Recibido', 'Acciones'].map((h) => (
                   <th key={h} className="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider border-l border-gray-100 first:border-l-0">
                     {h}
                   </th>
@@ -409,6 +409,8 @@ export default function RequisitionDetailPage() {
                     )}
                   </div>
                 </td>
+                <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{d.item_ppto ?? '—'}</td>
+                <td className="px-3 py-3 text-gray-700 whitespace-nowrap">{d.item_sinco_adpro ?? '—'}</td>
                 <td className="px-3 py-3 text-gray-700 whitespace-nowrap"><CurrencyCOP value={Number(d.precio_unitario ?? 0)} /></td>
                 <td className="px-4 py-3 font-semibold text-gray-900">
                   {(() => {

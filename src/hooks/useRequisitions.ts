@@ -64,7 +64,7 @@ export function useRequisitionById(id?: number) {
           proveedor_final:proveedores!proveedor_final_id(id, nombre, whatsapp, contacto_nombre),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
-            precio_unitario, total_linea, notas, created_at,
+            precio_unitario, total_linea, notas, item_ppto, item_sinco_adpro, created_at,
             completado, completado_at, completado_por,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
             proveedor_sugerido:proveedores!proveedor_sugerido_id(id, nombre, whatsapp, codigo_interno)
@@ -144,7 +144,6 @@ export function useSaveDraftRequisition() {
           categoria: form.categoria,
           fecha_maxima_entrega: form.fecha_maxima_entrega || null,
           item_ppto: form.item_ppto || null,
-          item_sinco_adpro: form.item_sinco_adpro || null,
           notas_empleado: form.notas_empleado || null,
           total_estimado: totalEstimado,
           estado: 'BORRADOR',
@@ -169,6 +168,8 @@ export function useSaveDraftRequisition() {
           producto_id: item.producto_id,
           cantidad: item.cantidad,
           notas: item.notas || null,
+          item_ppto: item.item_ppto || null,
+          item_sinco_adpro: item.item_sinco_adpro || null,
           proveedor_sugerido_id: best?.proveedor_id ?? null,
           precio_unitario: best?.precio_unitario ?? null,
         }
@@ -273,7 +274,6 @@ export function useCreateRequisition() {
           categoria: form.categoria,
           fecha_maxima_entrega: form.fecha_maxima_entrega || null,
           item_ppto: form.item_ppto || null,
-          item_sinco_adpro: form.item_sinco_adpro || null,
           notas_empleado: form.notas_empleado || null,
           total_estimado: totalEstimado,
           estado: 'PENDIENTE',
@@ -298,6 +298,8 @@ export function useCreateRequisition() {
           producto_id: item.producto_id,
           cantidad: item.cantidad,
           notas: item.notas || null,
+          item_ppto: item.item_ppto || null,
+          item_sinco_adpro: item.item_sinco_adpro || null,
           proveedor_sugerido_id: best?.proveedor_id ?? null,
           precio_unitario: best?.precio_unitario ?? null,
         }

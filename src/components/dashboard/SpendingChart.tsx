@@ -19,15 +19,15 @@ interface PieData  { name: string; value: number }
 
 export function SpendingBarChart({ data, title }: { data: BarData[]; title: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} margin={{ left: 0, right: 0, top: 4, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e9eef5" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} />
           <YAxis tick={{ fontSize: 11, fill: '#6b7280' }} />
           <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v) => [`$${Number(v).toLocaleString('es-CO')}`, 'Total']} />
-          <Bar dataKey="value" fill="#1e3a5f" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="value" fill="#2f6fed" radius={[5, 5, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -36,11 +36,11 @@ export function SpendingBarChart({ data, title }: { data: BarData[]; title: stri
 
 export function TopSuppliersChart({ data, title }: { data: BarData[]; title: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={Math.max(180, data.length * 36)}>
         <BarChart data={data} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e9eef5" horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
           <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 11, fill: '#374151' }} />
           <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} formatter={(v) => [`${Number(v)} productos`, 'Catálogo']} />
@@ -55,8 +55,8 @@ export function TopSuppliersChart({ data, title }: { data: BarData[]; title: str
 
 export function SpendingPieChart({ data, title }: { data: PieData[]; title: string }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4">{title}</h3>
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-700 mb-4">{title}</h3>
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}

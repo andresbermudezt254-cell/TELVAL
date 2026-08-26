@@ -3,13 +3,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
 import { StatsCard } from '@/components/dashboard/StatsCard'
 import { SpendingBarChart, TopSuppliersChart, SpendingPieChart } from '@/components/dashboard/SpendingChart'
-import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
-import { CategoryBadge } from '@/components/requisitions/CategoryBadge'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
 import { PageLoader } from '@/components/ui/Spinner'
-import { formatDate } from '@/lib/utils'
-import { Clock, CheckCircle, DollarSign, Package } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Clock, CheckCircle, DollarSign, Package, Activity } from 'lucide-react'
 
 function useDashboardStats() {
   return useQuery({
@@ -18,13 +14,9 @@ function useDashboardStats() {
       const now = new Date()
       const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 
-      const [pending, completed, recent] = await Promise.all([
+      const [pending, completed] = await Promise.all([
         supabase.from('requisiciones').select('id', { count: 'exact', head: true }).in('estado', ['PENDIENTE', 'EN_REVISION']),
         supabase.from('requisiciones').select('id,total_estimado').eq('estado', 'COMPLETADA').gte('fecha_solicitud', firstDay),
-        supabase.from('requisiciones')
-          .select('id,codigo,estado,categoria,fecha_solicitud,total_estimado,punto,numero_aviso')
-          .order('fecha_solicitud', { ascending: false })
-          .limit(8),
       ])
 
       const completedRows = (completed.data ?? []) as Array<Record<string, unknown>>
@@ -44,7 +36,7 @@ function useDashboardStats() {
         weeks.push({ name: `S${i === 0 ? 'E' : i}`, value: Math.round(total) })
       }
 
-      return { pendingCount: pending.count ?? 0, completedCount: completed.data?.length ?? 0, totalMes, recent: recent.data ?? [], weeklySpend: weeks }
+      return { pendingCount: pending.count ?? 0, completedCount: completed.data?.length ?? 0, totalMes, weeklySpend: weeks }
     },
     staleTime: 60_000,
   })
@@ -89,85 +81,69 @@ function useDashboardCharts() {
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const navigate = useNavigate()
   const { data, isLoading } = useDashboardStats()
   const { data: charts } = useDashboardCharts()
 
   if (isLoading) return <PageLoader />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7 pb-6">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-[#0f2440] to-[#1e3a5f] px-6 py-5 flex items-center justify-between shadow-sm">
+      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-6 flex items-center justify-between shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold mb-2">
+            <Activity size={13} className="text-emerald-500" /> Resumen operativo
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Bienvenido, {user?.nombre_completo?.split(' ')[0] ?? user?.email}
           </h1>
-          <p className="text-blue-300/70 text-sm mt-0.5">
+          <p className="text-slate-500 text-sm mt-1">
             {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2 backdrop-blur-sm">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs font-medium text-white/80">Sistema en línea</span>
+        <div className="hidden sm:flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-xs font-semibold text-emerald-700">Sistema en línea</span>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatsCard title="Pendientes" value={data?.pendingCount ?? 0} icon={Clock} color="orange" />
         <StatsCard title="Completadas este mes" value={data?.completedCount ?? 0} icon={CheckCircle} color="green" />
         <StatsCard title="Gasto estimado mes" value={<CurrencyCOP value={data?.totalMes} />} icon={DollarSign} color="blue" />
-        <StatsCard title="En proceso" value={data?.pendingCount ?? 0} icon={Package} color="purple" />
+        <StatsCard title="En proceso" value={data?.pendingCount ?? 0} icon={Package} color="teal" />
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div>
+        <div className="flex items-end justify-between mb-3">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Actividad</p>
+            <h2 className="text-lg font-bold text-slate-900 mt-1">Comportamiento del abastecimiento</h2>
+          </div>
+          <span className="hidden sm:block text-xs text-slate-400">Actualización automática</span>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {data?.weeklySpend && (
           <SpendingBarChart data={data.weeklySpend} title="Gasto estimado por semana (últimas 8 semanas)" />
         )}
         {charts?.byCategory && charts.byCategory.length > 0 && (
           <SpendingPieChart data={charts.byCategory} title="Productos por categoría" />
         )}
+        </div>
       </div>
 
       {/* Top suppliers */}
       {charts?.topSuppliers && charts.topSuppliers.length > 0 && (
-        <TopSuppliersChart data={charts.topSuppliers} title="Top proveedores por productos en catálogo" />
-      )}
-
-      {/* Recent requisitions */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b flex justify-between items-center">
-          <h3 className="text-sm font-semibold text-gray-700">Requisiciones recientes</h3>
-          <button onClick={() => navigate('/admin/requisiciones')} className="text-xs text-[#1e3a5f] font-medium hover:underline">Ver todas</button>
+        <div>
+          <div className="mb-3">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Catálogo</p>
+            <h2 className="text-lg font-bold text-slate-900 mt-1">Proveedores con mayor cobertura</h2>
+          </div>
+          <TopSuppliersChart data={charts.topSuppliers} title="Productos activos por proveedor" />
         </div>
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Código', 'Fecha', 'Punto', 'Aviso', 'Categoría', 'Estado', 'Total'].map((h) => (
-                <th key={h} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {((data?.recent ?? []) as Array<Record<string, unknown>>).map((r) => (
-              <tr key={String(r.id)} onClick={() => navigate(`/admin/requisiciones/${String(r.id)}`)} className="border-t hover:bg-blue-50 cursor-pointer transition-colors">
-                <td className="px-4 py-2.5 font-mono font-semibold text-[#1e3a5f]">{String(r.codigo ?? '')}</td>
-                <td className="px-4 py-2.5 text-gray-500">{formatDate(String(r.fecha_solicitud ?? ''))}</td>
-                <td className="px-4 py-2.5">{String(r.punto ?? '')}</td>
-                <td className="px-4 py-2.5">{String(r.numero_aviso ?? '')}</td>
-                <td className="px-4 py-2.5"><CategoryBadge categoria={String(r.categoria ?? '')} /></td>
-                <td className="px-4 py-2.5"><StatusBadge estado={String(r.estado ?? '')} /></td>
-                <td className="px-4 py-2.5 font-semibold"><CurrencyCOP value={Number(r.total_estimado ?? 0)} /></td>
-              </tr>
-            ))}
-            {!(data?.recent?.length) && (
-              <tr><td colSpan={7} className="px-4 py-6 text-center text-sm text-gray-400">Sin requisiciones aún</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      )}
     </div>
   )
 }
