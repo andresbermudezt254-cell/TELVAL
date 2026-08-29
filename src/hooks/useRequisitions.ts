@@ -64,7 +64,7 @@ export function useRequisitionById(id?: number) {
           proveedor_final:proveedores!proveedor_final_id(id, nombre, whatsapp, contacto_nombre),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
-            precio_unitario, total_linea, notas, item_ppto, item_sinco_adpro, created_at,
+            precio_unitario, total_linea, notas, item_ppto, item_sinco_adpro, unidad_medida_item, created_at,
             completado, completado_at, completado_por,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
             proveedor_sugerido:proveedores!proveedor_sugerido_id(id, nombre, whatsapp, codigo_interno)
@@ -170,6 +170,7 @@ export function useSaveDraftRequisition() {
           notas: item.notas || null,
           item_ppto: item.item_ppto || null,
           item_sinco_adpro: item.item_sinco_adpro || null,
+          unidad_medida_item: item.unidad_medida_item || null,
           proveedor_sugerido_id: best?.proveedor_id ?? null,
           precio_unitario: best?.precio_unitario ?? null,
         }
@@ -300,6 +301,7 @@ export function useCreateRequisition() {
           notas: item.notas || null,
           item_ppto: item.item_ppto || null,
           item_sinco_adpro: item.item_sinco_adpro || null,
+          unidad_medida_item: item.unidad_medida_item || null,
           proveedor_sugerido_id: best?.proveedor_id ?? null,
           precio_unitario: best?.precio_unitario ?? null,
         }

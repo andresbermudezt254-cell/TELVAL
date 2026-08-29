@@ -182,6 +182,7 @@ export interface CartItem {
   notas?: string
   item_ppto?: string
   item_sinco_adpro?: string
+  unidad_medida_item?: string
 }
 
 export interface NuevaRequisicionForm {
@@ -198,6 +199,7 @@ export interface NuevaRequisicionForm {
     notas?: string
     item_ppto?: string
     item_sinco_adpro?: string
+    unidad_medida_item?: string
   }>
 }
 

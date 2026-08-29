@@ -103,11 +103,44 @@ const sincoAdproOptions = [
   { value: '5.3', label: '5.3 - Combustible' },
 ]
 
+const unidadesMedidaOptions = [
+  { value: 'UND', label: 'UND - Unidad' },
+  { value: 'ML', label: 'ML - Metro lineal' },
+  { value: 'm2', label: 'm² - Metro cuadrado' },
+  { value: 'm3', label: 'm³ - Metro cúbico' },
+  { value: 'KG', label: 'KG - Kilogramo' },
+  { value: 'TON', label: 'TON - Tonelada' },
+  { value: 'LT', label: 'LT - Litro' },
+  { value: 'GL', label: 'GL - Galón' },
+  { value: 'cm', label: 'cm - Centímetro' },
+  { value: 'm', label: 'm - Metro' },
+  { value: 'mm', label: 'mm - Milímetro' },
+  { value: 'SAC', label: 'SAC - Saco' },
+  { value: 'CJ', label: 'CJ - Caja' },
+  { value: 'RLL', label: 'RLL - Rollo' },
+  { value: 'PQ', label: 'PQ - Paquete' },
+  { value: 'BL', label: 'BL - Bolsa' },
+  { value: 'BOT', label: 'BOT - Botella' },
+  { value: 'LAT', label: 'LAT - Lata' },
+  { value: 'PAR', label: 'PAR - Par' },
+  { value: 'DOC', label: 'DOC - Docena' },
+  { value: 'CEN', label: 'CEN - Centena' },
+  { value: 'MIL', label: 'MIL - Millar' },
+  { value: 'cm2', label: 'cm² - Centímetro cuadrado' },
+  { value: 'cm3', label: 'cm³ - Centímetro cúbico' },
+  { value: 'g', label: 'g - Gramo' },
+  { value: 'mg', label: 'mg - Miligramo' },
+  { value: 'mL', label: 'mL - Mililitro' },
+  { value: 'in', label: 'in - Pulgada' },
+  { value: 'ft', label: 'ft - Pie' },
+  { value: 'yd', label: 'yd - Yarda' },
+]
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function NewRequisitionPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
-  const { items, removeItem, updateCantidad, updatePpto, updateSinco, clearCart, totalEstimado } = useCart()
+  const { items, removeItem, updateCantidad, updatePpto, updateSinco, updateUnidadMedida, clearCart, totalEstimado } = useCart()
   const createMutation = useCreateRequisition()
 
   const productIds = items.map((i) => i.producto.id)
@@ -138,6 +171,7 @@ export default function NewRequisitionPage() {
         notas: i.notas,
         item_ppto: i.item_ppto,
         item_sinco_adpro: i.item_sinco_adpro,
+        unidad_medida_item: i.unidad_medida_item,
       })),
     })
     clearCart()
@@ -265,7 +299,7 @@ export default function NewRequisitionPage() {
               </div>
 
               <div className="divide-y divide-gray-100">
-                {items.map(({ producto, cantidad, item_ppto, item_sinco_adpro }) => {
+                {items.map(({ producto, cantidad, item_ppto, item_sinco_adpro, unidad_medida_item }) => {
                   const best = bestSuppliers?.get(producto.id)
                   const unitPrice = best?.precio_unitario ?? (producto as any).precio_minimo
                   const lineTotal = unitPrice ? unitPrice * cantidad : null
@@ -281,13 +315,24 @@ export default function NewRequisitionPage() {
                           <p className="font-semibold text-gray-900 text-sm">{producto.nombre}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{producto.codigo} · {producto.unidad_medida}</p>
 
-                          <div className="mt-3 max-w-md">
-                            <Input
-                              label="Item PPTO"
-                              placeholder="Ej: 23.22"
-                              value={item_ppto ?? ''}
-                              onChange={(event) => updatePpto(producto.id, event.target.value, producto.proveedor_id)}
-                            />
+                          <div className="mt-3 space-y-3">
+                            <div className="grid grid-cols-3 gap-3">
+                              <Input
+                                label="Item PPTO"
+                                placeholder="Ej: 23.22"
+                                value={item_ppto ?? ''}
+                                onChange={(event) => updatePpto(producto.id, event.target.value, producto.proveedor_id)}
+                              />
+                              <div className="col-span-2">
+                                <Select
+                                  label="Unidad de medida"
+                                  options={unidadesMedidaOptions}
+                                  placeholder="Selecciona unidad"
+                                  value={unidad_medida_item ?? ''}
+                                  onChange={(event) => updateUnidadMedida(producto.id, event.target.value, producto.proveedor_id)}
+                                />
+                              </div>
+                            </div>
                             <Select
                               label="Item SINCO-ADPRO"
                               options={sincoAdproOptions}
