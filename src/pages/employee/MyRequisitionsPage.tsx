@@ -75,17 +75,38 @@ export default function MyRequisitionsPage() {
   const requisiciones = result?.data ?? []
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <span className="text-base">📋</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Mis Requisiciones</h1>
+              {!isLoading && (
+                <span className="text-xs font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {requisiciones.length} registradas
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Seguimiento de pedidos solicitados y estado de entrega</p>
+          </div>
+        </div>
+      </div>
+
       {/* Estado chips */}
-      <div className="flex flex-wrap gap-2">
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-wrap gap-1.5 items-center">
+        <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold mr-2">Filtrar:</span>
         {ESTADOS.map(({ label, value }) => (
           <button
             key={value}
             onClick={() => setEstadoFilter(value === 'all' ? undefined : value as EstadoRequisicion)}
-            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+            className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
               (value === 'all' && !estadoFilter) || estadoFilter === value
-                ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
-                : 'bg-white text-gray-600 border-gray-300 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
+                ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm'
+                : 'bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-white hover:border-[#1e3a5f]'
             }`}
           >
             {label}
@@ -96,33 +117,37 @@ export default function MyRequisitionsPage() {
       {isLoading ? (
         <PageLoader />
       ) : !requisiciones.length ? (
-        <EmptyState title="Sin requisiciones" description="Aún no has creado requisiciones." />
+        <EmptyState title="Sin requisiciones" description="Aún no has creado requisiciones con estos filtros." />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-200/90 overflow-x-auto shadow-xs">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
                 {['Código', 'Fecha', 'Punto', 'Aviso', 'Categoría', 'Estado', 'Total Est.'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th key={h} className="text-left px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {requisiciones.map((req) => (
                 <tr
                   key={req.id}
                   onClick={() => setSelectedId(req.id)}
-                  className="border-b last:border-0 hover:bg-blue-50 cursor-pointer transition-colors"
+                  className="hover:bg-blue-50/40 cursor-pointer transition-colors group"
                 >
-                  <td className="px-4 py-3 font-mono font-semibold text-[#1e3a5f]">{req.codigo}</td>
-                  <td className="px-4 py-3 text-gray-500">{formatDate(req.fecha_solicitud)}</td>
-                  <td className="px-4 py-3">{req.punto}</td>
-                  <td className="px-4 py-3">{req.numero_aviso}</td>
-                  <td className="px-4 py-3"><CategoryBadge categoria={req.categoria} /></td>
-                  <td className="px-4 py-3"><StatusBadge estado={req.estado} /></td>
-                  <td className="px-4 py-3 font-semibold"><CurrencyCOP value={req.total_estimado} /></td>
+                  <td className="px-4 py-3.5">
+                    <span className="font-mono text-xs font-bold text-[#1e3a5f] bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded shadow-2xs group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors">
+                      {req.codigo}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-xs text-slate-500 font-medium">{formatDate(req.fecha_solicitud)}</td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-slate-800">{req.punto}</td>
+                  <td className="px-4 py-3.5 text-xs font-mono text-slate-500">{req.numero_aviso}</td>
+                  <td className="px-4 py-3.5"><CategoryBadge categoria={req.categoria} /></td>
+                  <td className="px-4 py-3.5"><StatusBadge estado={req.estado} /></td>
+                  <td className="px-4 py-3.5 font-bold text-slate-900"><CurrencyCOP value={req.total_estimado} /></td>
                 </tr>
               ))}
             </tbody>

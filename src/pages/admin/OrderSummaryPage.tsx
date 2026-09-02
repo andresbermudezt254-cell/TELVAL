@@ -141,68 +141,105 @@ export default function OrderSummaryPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-black text-gray-900">Consolidado de Compras</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Productos por proveedor - marca el check cuando ya lo pediste</p>
-        </div>
-        {totalLineas > 0 && (
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-xs text-gray-400">{totalPedidos}/{totalLineas} pedidos · {totalUnidades} unidades</span>
-            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: pct + '%' }} />
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-200/70 flex items-center justify-center text-purple-700 font-black text-sm shadow-2xs">
+            <ShoppingCart size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Consolidado de Compras</h1>
+              <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                {totalLineas} ítems agrupados
+              </span>
             </div>
-            <span className="text-[10px] font-bold text-emerald-600">{pct}% completado</span>
+            <p className="text-xs text-slate-500 mt-0.5">Agrupación por proveedor para cotización y despacho masivo</p>
+          </div>
+        </div>
+
+        {totalLineas > 0 && (
+          <div className="flex flex-col sm:items-end gap-1.5 bg-slate-50 border border-slate-200/80 p-3 rounded-2xl">
+            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs font-bold">
+              <span className="text-slate-500">{totalPedidos} de {totalLineas} pedidos</span>
+              <span className="text-emerald-700">{pct}% completado</span>
+            </div>
+            <div className="w-40 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: pct + '%' }}
+              />
+            </div>
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-gray-400 font-medium">Ver:</span>
-        {ESTADOS_FILTRO.map((e) => (
-          <button
-            key={e.value}
-            onClick={() => toggleEstado(e.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${activeEstados.includes(e.value) ? e.on : e.off}`}
-          >
-            {e.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2 items-center mt-2">
-        <span className="text-xs text-gray-400 font-medium">Categorías:</span>
-        {CATEGORIAS_FILTRO.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => toggleCategoria(cat.value)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all duration-200 ${activeCategorias.includes(cat.value) ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]' : 'bg-white text-gray-600 border-gray-200 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'}`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-
+      {/* KPI Stats */}
       {!isLoading && supplierEntries.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Proveedores</p>
-            <p className="text-3xl font-black text-[#1e3a5f] mt-1">{supplierEntries.filter(([k]) => k !== '__sin__').length}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="relative bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600" />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Proveedores</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{supplierEntries.filter(([k]) => k !== '__sin__').length}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Líneas activas</p>
-            <p className="text-3xl font-black text-[#1e3a5f] mt-1">{totalLineas}</p>
+          <div className="relative bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#f97316]" />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Líneas activas</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{totalLineas}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Unidades</p>
-            <p className="text-3xl font-black text-[#1e3a5f] mt-1">{totalUnidades.toLocaleString('es-CO')}</p>
+          <div className="relative bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-purple-600" />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Unidades</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{totalUnidades.toLocaleString('es-CO')}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-            <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wider">Total estimado</p>
-            <p className="text-lg font-black text-[#1e3a5f] mt-1">{formatCOP(grandTotal)}</p>
+          <div className="relative bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total estimado</p>
+            <p className="text-lg font-black text-slate-900 mt-1">{formatCOP(grandTotal)}</p>
           </div>
         </div>
       )}
+
+      {/* Filter Toolbar */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold min-w-[70px]">Estado:</span>
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {ESTADOS_FILTRO.map((e) => (
+              <button
+                key={e.value}
+                onClick={() => toggleEstado(e.value)}
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all duration-200 ${
+                  activeEstados.includes(e.value)
+                    ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-[#1e3a5f]'
+                }`}
+              >
+                {e.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-3 border-t border-slate-100">
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold min-w-[70px]">Prioridad:</span>
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {CATEGORIAS_FILTRO.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => toggleCategoria(cat.value)}
+                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all duration-200 ${
+                  activeCategorias.includes(cat.value)
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-800'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="flex justify-center py-24"><Spinner /></div>

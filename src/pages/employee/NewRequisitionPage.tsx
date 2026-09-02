@@ -49,28 +49,34 @@ function useBestSuppliers(productIds: number[]) {
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 function StepBar({ step }: { step: number }) {
-  const steps = [{ n: 1, label: 'Datos del pedido' }, { n: 2, label: 'Revisar y enviar' }]
+  const steps = [{ n: 1, label: '1. Datos de solicitud' }, { n: 2, label: '2. Revisión de insumos y despacho' }]
   return (
-    <div className="flex items-center mb-6">
-      {steps.map(({ n, label }, i) => (
-        <div key={n} className="flex items-center flex-1 last:flex-none">
-          <div className="flex flex-col items-center gap-1">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
-              step > n ? 'bg-emerald-500 border-emerald-500 text-white'
-                : step === n ? 'bg-[#1e3a5f] border-[#1e3a5f] text-white shadow-lg shadow-blue-200'
-                  : 'bg-white border-gray-300 text-gray-400'
-            }`}>
-              {step > n ? <CheckCircle2 size={18} /> : n}
+    <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs mb-6">
+      <div className="flex items-center justify-between">
+        {steps.map(({ n, label }, i) => (
+          <div key={n} className="flex items-center flex-1 last:flex-none">
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-black border transition-all ${
+                  step > n
+                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                    : step === n
+                    ? 'bg-[#1e3a5f] border-[#1e3a5f] text-white shadow-md shadow-blue-900/20 ring-4 ring-blue-100'
+                    : 'bg-slate-100 border-slate-200 text-slate-400'
+                }`}
+              >
+                {step > n ? <CheckCircle2 size={16} /> : n}
+              </div>
+              <span className={`text-xs font-bold whitespace-nowrap ${step >= n ? 'text-slate-900' : 'text-slate-400'}`}>
+                {label}
+              </span>
             </div>
-            <span className={`text-[10px] font-semibold whitespace-nowrap ${step >= n ? 'text-[#1e3a5f]' : 'text-gray-400'}`}>
-              {label}
-            </span>
+            {i < steps.length - 1 && (
+              <div className={`flex-1 h-0.5 mx-4 rounded-full transition-all ${step > n ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+            )}
           </div>
-          {i < steps.length - 1 && (
-            <div className={`flex-1 h-0.5 mx-3 mb-4 transition-all ${step > n ? 'bg-emerald-400' : 'bg-gray-200'}`} />
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

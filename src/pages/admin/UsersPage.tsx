@@ -342,45 +342,49 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-full">
-            <ShieldCheck size={13} className="text-purple-600" />
-            <span className="text-xs font-semibold text-purple-700">{adminCount} admin{adminCount !== 1 ? 's' : ''}</span>
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <Users size={20} />
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full">
-            <Users size={13} className="text-blue-600" />
-            <span className="text-xs font-semibold text-blue-700">{empleadoCount} empleado{empleadoCount !== 1 ? 's' : ''}</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-100 rounded-full">
-            <Users size={13} className="text-orange-600" />
-            <span className="text-xs font-semibold text-orange-700">{warehouseCount} almacén</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-100 rounded-full">
-            <UserCheck size={13} className="text-green-600" />
-            <span className="text-xs font-semibold text-green-700">{activeCount} activo{activeCount !== 1 ? 's' : ''}</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Usuarios del Sistema</h1>
+              <span className="text-xs font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                {users?.length ?? 0} registrados
+              </span>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {activeCount} activos
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Administración de roles, permisos, especialidades y accesos</p>
           </div>
         </div>
-        <Button onClick={() => setCreateOpen(true)} icon={<Plus size={15} />}>
-          Nuevo usuario
-        </Button>
+
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-bold tracking-wide transition-all shadow-md shadow-orange-950/20 hover:-translate-y-0.5"
+        >
+          <Plus size={16} />
+          <span>Nuevo Usuario</span>
+        </button>
       </div>
 
       {/* Table */}
       {!users?.length ? (
         <EmptyState icon={<Users size={40} strokeWidth={1} />} title="Sin usuarios" description="No hay usuarios registrados." />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-200/90 overflow-x-auto shadow-xs">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
                 {['Usuario', 'Contacto', 'Especialidad', 'Rol', 'Estado', 'Acciones'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-[11px] font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  <th key={h} className="text-left px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {users.map((u) => (
                 <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50/60 transition-colors">
                   <td className="px-4 py-3.5">

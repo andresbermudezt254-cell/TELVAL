@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Edit2, DollarSign, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Edit2, DollarSign, Trash2, ChevronDown, ChevronUp, Package } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useProductsWithPrices, useCategorias, useProductById } from '@/hooks/useProducts'
@@ -241,58 +241,112 @@ export default function ProductsPage() {
   const closeModal = () => { setModalOpen(false); setEditId(undefined) }
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar producto..."
-          className="flex-1 px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
-        />
+    <div className="space-y-5">
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <Package size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Catálogo de Productos</h1>
+              {!isLoading && products && (
+                <span className="text-xs font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {products.length} productos
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Administración de referencias, unidades de medida y tarifas por proveedor</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => openEdit()}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-bold tracking-wide transition-all shadow-md shadow-orange-950/20 hover:-translate-y-0.5"
+        >
+          <Plus size={16} />
+          <span>Nuevo Producto</span>
+        </button>
+      </div>
+
+      {/* Search & Category Filter Toolbar */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nombre o código de insumo..."
+            className="w-full pl-4 pr-4 py-2.5 rounded-2xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-[#1e3a5f] bg-slate-50/50 shadow-2xs"
+          />
+        </div>
         <Select
           options={(categorias ?? []).map((c) => ({ value: String(c.id), label: c.nombre }))}
           placeholder="Todas las categorías"
           value={categoriaId ? String(categoriaId) : ''}
           onChange={(e) => setCategoriaId(e.target.value ? Number(e.target.value) : undefined)}
-          className="w-48"
+          className="w-full sm:w-60"
         />
-        <Button onClick={() => openEdit()} icon={<Plus size={16} />}>Nuevo</Button>
       </div>
 
       {isLoading ? (
         <PageLoader />
       ) : !products?.length ? (
-        <EmptyState title="Sin productos" description="No se encontraron productos." action={<Button onClick={() => openEdit()}>Crear producto</Button>} />
+        <EmptyState title="Sin productos" description="No se encontraron productos con los filtros seleccionados." action={<Button onClick={() => openEdit()}>Crear producto</Button>} />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-200/90 overflow-x-auto shadow-xs">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {['Código', 'Nombre', 'Categoría', 'UM', 'Precio mín.', 'Proveedor más barato', 'Estado', 'Acciones'].map((h) => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                {['Código', 'Nombre', 'Categoría', 'UM', 'Precio mín.', 'Mejor Proveedor', 'Estado', 'Acciones'].map((h) => (
+                  <th key={h} className="text-left px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {products.map((p) => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs text-gray-500">{p.codigo}</td>
-                  <td className="px-4 py-3 font-medium">{p.nombre}</td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{p.categoria?.icono} {p.categoria?.nombre}</td>
-                  <td className="px-4 py-3">{p.unidad_medida}</td>
-                  <td className="px-4 py-3 font-semibold text-green-700">
+                <tr key={p.id} className="hover:bg-slate-50/70 transition-colors group">
+                  <td className="px-4 py-3.5">
+                    <span className="font-mono text-xs font-bold text-[#1e3a5f] bg-slate-100/90 border border-slate-200/80 px-2 py-0.5 rounded shadow-2xs">
+                      {p.codigo}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 font-bold text-slate-900 text-sm max-w-xs truncate">{p.nombre}</td>
+                  <td className="px-4 py-3.5 text-xs text-slate-600 font-medium whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200/80 px-2 py-0.5 rounded-full">
+                      <span>{p.categoria?.icono}</span>
+                      <span>{p.categoria?.nombre}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-xs font-bold text-slate-500 uppercase">{p.unidad_medida}</td>
+                  <td className="px-4 py-3.5 font-black text-slate-900 text-sm whitespace-nowrap">
                     {(p as any).precio_minimo
-                      ? <CurrencyCOP value={(p as any).precio_minimo} />
-                      : <span className="text-gray-400 text-xs">Sin precio</span>}
+                      ? <span className="text-emerald-700"><CurrencyCOP value={(p as any).precio_minimo} /></span>
+                      : <span className="text-slate-400 text-xs italic font-normal">Sin tarifa</span>}
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-600">{(p as any).proveedor_mas_barato ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <Badge className={p.activo ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
+                  <td className="px-4 py-3.5 text-xs">
+                    {(p as any).proveedor_mas_barato ? (
+                      <span className="inline-flex items-center gap-1 font-bold text-slate-700 bg-emerald-50/80 border border-emerald-200/80 px-2 py-0.5 rounded-md text-[11px]">
+                        🏆 {(p as any).proveedor_mas_barato}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 italic text-[11px]">Por cotizar</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                      p.activo ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80' : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${p.activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                       {p.activo ? 'Activo' : 'Inactivo'}
-                    </Badge>
+                    </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => openEdit(p.id)} className="p-1.5 rounded hover:bg-blue-100 text-gray-500 hover:text-[#1e3a5f]">
+                  <td className="px-4 py-3.5">
+                    <button
+                      onClick={() => openEdit(p.id)}
+                      className="p-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-600 hover:text-[#1e3a5f] transition-colors shadow-2xs"
+                      title="Editar producto y tarifas"
+                    >
                       <Edit2 size={14} />
                     </button>
                   </td>

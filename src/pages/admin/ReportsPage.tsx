@@ -82,38 +82,75 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <label className="text-xs font-semibold text-gray-500 block mb-1">Desde</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <BarChart2 size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Reportes y Estadísticas</h1>
+              <span className="text-xs font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                Auditoría
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Métricas de gasto acumulado, especialidades y exportación de datos</p>
+          </div>
         </div>
-        <div>
-          <label className="text-xs font-semibold text-gray-500 block mb-1">Hasta</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]" />
+
+        <button
+          onClick={exportCSV}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold tracking-wide transition-all shadow-md shadow-emerald-950/20 hover:-translate-y-0.5"
+        >
+          <Download size={15} />
+          <span>Exportar a CSV</span>
+        </button>
+      </div>
+
+      {/* Date Filters Card */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-bold text-slate-500">Desde:</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-slate-50 shadow-2xs"
+          />
         </div>
-        <Button variant="outline" size="sm" icon={<Download size={14} />} onClick={exportCSV}>Exportar CSV</Button>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-bold text-slate-500">Hasta:</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#1e3a5f] bg-slate-50 shadow-2xs"
+          />
+        </div>
       </div>
 
       {isLoading ? <PageLoader /> : (
         <>
           {/* KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard title="Total gasto estimado" value={<CurrencyCOP value={data?.totalGasto} />} icon={DollarSign} color="blue" />
-            <StatsCard title="Requisiciones totales" value={data?.all?.length ?? 0} icon={Package} color="orange" />
-            <StatsCard title="Completadas" value={data?.completed?.length ?? 0} icon={CheckCircle} color="green" />
-            <StatsCard title="Promedio por req." value={<CurrencyCOP value={data?.avgGasto} />} icon={BarChart2} color="purple" />
+            <StatsCard title="Total gasto estimado" value={<CurrencyCOP value={data?.totalGasto} />} icon={DollarSign} color="blue" description="En requisiciones completadas" />
+            <StatsCard title="Requisiciones totales" value={data?.all?.length ?? 0} icon={Package} color="orange" description="En el período seleccionado" />
+            <StatsCard title="Completadas" value={data?.completed?.length ?? 0} icon={CheckCircle} color="green" description="Materiales recepcionados" />
+            <StatsCard title="Promedio por req." value={<CurrencyCOP value={data?.avgGasto} />} icon={BarChart2} color="purple" description="Ticket promedio de compra" />
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {data?.monthlyData?.length ? (
-              <SpendingBarChart data={data.monthlyData} title="Gasto mensual (completadas)" />
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow">
+                <SpendingBarChart data={data.monthlyData} title="Gasto mensual consolidado" />
+              </div>
             ) : null}
             {data?.specData?.length ? (
-              <SpendingPieChart data={data.specData} title="Gasto por especialidad" />
+              <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow">
+                <SpendingPieChart data={data.specData} title="Distribución de gasto por especialidad" />
+              </div>
             ) : null}
           </div>
         </>

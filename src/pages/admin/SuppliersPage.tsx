@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Edit2, MessageCircle, BookOpen, MapPin, Hash, User, Mail, Package, DollarSign, Trash2 } from 'lucide-react'
+import { Plus, Edit2, MessageCircle, BookOpen, MapPin, Hash, User, Mail, Package, DollarSign, Trash2, Truck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -281,112 +281,137 @@ export default function SuppliersPage() {
   ]
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-3">
+    <div className="space-y-5">
+      {/* Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <Truck size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Directorio de Proveedores</h1>
+              {!isLoading && suppliers && (
+                <span className="text-xs font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                  {suppliers.length} registrados
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Gestión de contactos comerciales, tarifas y cotizaciones directas</p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => openEdit()}
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-bold tracking-wide transition-all shadow-md shadow-orange-950/20 hover:-translate-y-0.5"
+        >
+          <Plus size={16} />
+          <span>Nuevo Proveedor</span>
+        </button>
+      </div>
+
+      {/* Search Toolbar */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-xs">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar proveedor..."
-          className="flex-1 px-3 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]"
+          placeholder="Buscar proveedor por nombre, ciudad, NIT o contacto..."
+          className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-3 focus:ring-blue-100 focus:border-[#1e3a5f] bg-slate-50/50 shadow-2xs"
         />
-        <Button onClick={() => openEdit()} icon={<Plus size={16} />}>Nuevo</Button>
       </div>
 
       {isLoading ? (
         <PageLoader />
       ) : !suppliers?.length ? (
-        <EmptyState title="Sin proveedores" description="No se encontraron proveedores." action={<Button onClick={() => openEdit()}>Agregar proveedor</Button>} />
+        <EmptyState title="Sin proveedores" description="No se encontraron proveedores con ese término de búsqueda." action={<Button onClick={() => openEdit()}>Agregar proveedor</Button>} />
       ) : (
-        <>
-          <p className="text-xs text-gray-500">{suppliers.length} proveedores</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {suppliers.map((s, idx) => {
-              const numProducts = productCounts?.get(s.id) ?? 0
-              const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
-              const initial = s.nombre.charAt(0).toUpperCase()
-              return (
-                <div key={s.id} className="bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all flex flex-col">
-                  {/* Header */}
-                  <div className="px-4 py-4 flex items-center gap-3 border-b border-gray-100">
-                    <div className={`w-10 h-10 rounded-lg ${avatarColor} flex items-center justify-center text-white font-bold text-base flex-shrink-0`}>
-                      {initial}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-gray-900 text-sm leading-tight line-clamp-2">{s.nombre}</p>
-                      {s.codigo_interno && (
-                        <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{s.codigo_interno}</p>
-                      )}
-                    </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {suppliers.map((s, idx) => {
+            const numProducts = productCounts?.get(s.id) ?? 0
+            const avatarColor = AVATAR_COLORS[idx % AVATAR_COLORS.length]
+            const initial = s.nombre.charAt(0).toUpperCase()
+            return (
+              <div key={s.id} className="bg-white rounded-3xl border border-slate-200/90 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden shadow-xs">
+                {/* Header */}
+                <div className="px-5 py-4 flex items-center gap-3 border-b border-slate-100 bg-slate-50/40">
+                  <div className={`w-11 h-11 rounded-2xl ${avatarColor} flex items-center justify-center text-white font-black text-base flex-shrink-0 shadow-2xs`}>
+                    {initial}
                   </div>
-
-                  {/* Body */}
-                  <div className="px-4 py-3 flex-1 space-y-2">
-                    {s.ciudad && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <MapPin size={12} className="text-gray-300 flex-shrink-0" />
-                        <span>{s.ciudad}</span>
-                      </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-900 text-sm leading-tight line-clamp-2">{s.nombre}</p>
+                    {s.codigo_interno && (
+                      <span className="font-mono text-[10px] text-slate-400 mt-0.5 block">{s.codigo_interno}</span>
                     )}
-                    {s.nit && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Hash size={12} className="text-gray-300 flex-shrink-0" />
-                        <span>NIT {s.nit}</span>
-                      </div>
-                    )}
-                    {s.contacto_nombre && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <User size={12} className="text-gray-300 flex-shrink-0" />
-                        <span className="truncate">{s.contacto_nombre}</span>
-                      </div>
-                    )}
-                    {s.email && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Mail size={12} className="text-gray-300 flex-shrink-0" />
-                        <span className="truncate">{s.email}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-xs text-gray-400 pt-0.5">
-                      <Package size={12} className="text-gray-300 flex-shrink-0" />
-                      <span>{numProducts} {numProducts === 1 ? 'producto' : 'productos'}</span>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div className="px-4 py-3 border-t bg-gray-50 flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => setCatalogSupplier({ id: s.id, nombre: s.nombre })}
-                      className="flex items-center gap-1 text-xs font-medium text-[#1e3a5f] hover:underline"
-                    >
-                      <BookOpen size={12} /> Ver catálogo
-                    </button>
-                    <button
-                      onClick={() => setPriceSupplier({ id: s.id, nombre: s.nombre })}
-                      className="flex items-center gap-1 text-xs font-medium text-green-700 hover:underline"
-                    >
-                      <DollarSign size={12} /> Precios
-                    </button>
-                    {s.whatsapp && (
-                      <a
-                        href={buildWhatsAppUrl(s.whatsapp, `Hola ${s.nombre}, te contactamos desde TELVAL S.A.S`)}
-                        target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs font-medium text-green-700 hover:underline"
-                      >
-                        <MessageCircle size={12} /> WhatsApp
-                      </a>
-                    )}
-                    <button
-                      onClick={() => openEdit(s.id)}
-                      className="ml-auto p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700"
-                      title="Editar"
-                    >
-                      <Edit2 size={13} />
-                    </button>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </>
+
+                {/* Body */}
+                <div className="px-5 py-3.5 flex-1 space-y-2">
+                  {s.ciudad && (
+                    <div className="flex items-center gap-2 text-xs text-slate-600 font-medium">
+                      <MapPin size={13} className="text-slate-400 flex-shrink-0" />
+                      <span>{s.ciudad}</span>
+                    </div>
+                  )}
+                  {s.nit && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <Hash size={13} className="text-slate-400 flex-shrink-0" />
+                      <span>NIT: {s.nit}</span>
+                    </div>
+                  )}
+                  {s.contacto_nombre && (
+                    <div className="flex items-center gap-2 text-xs text-slate-700 font-medium">
+                      <User size={13} className="text-slate-400 flex-shrink-0" />
+                      <span className="truncate">{s.contacto_nombre}</span>
+                    </div>
+                  )}
+                  {s.email && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <Mail size={13} className="text-slate-400 flex-shrink-0" />
+                      <span className="truncate">{s.email}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 pt-1">
+                    <Package size={13} className="text-blue-500 flex-shrink-0" />
+                    <span>{numProducts} {numProducts === 1 ? 'producto activo' : 'productos activos'}</span>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/60 flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setCatalogSupplier({ id: s.id, nombre: s.nombre })}
+                    className="flex items-center gap-1 text-[11px] font-bold text-[#1e3a5f] bg-white border border-slate-200 px-2.5 py-1 rounded-lg hover:bg-blue-50 shadow-2xs transition-colors"
+                  >
+                    <BookOpen size={11} /> Catálogo
+                  </button>
+                  <button
+                    onClick={() => setPriceSupplier({ id: s.id, nombre: s.nombre })}
+                    className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-100 shadow-2xs transition-colors"
+                  >
+                    <DollarSign size={11} /> Precios
+                  </button>
+                  {s.whatsapp && (
+                    <a
+                      href={buildWhatsAppUrl(s.whatsapp, `Hola ${s.nombre}, te contactamos desde TELVAL S.A.S`)}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg hover:bg-emerald-100 shadow-2xs transition-colors"
+                    >
+                      <MessageCircle size={11} /> WhatsApp
+                    </a>
+                  )}
+                  <button
+                    onClick={() => openEdit(s.id)}
+                    className="ml-auto p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 shadow-2xs transition-colors"
+                    title="Editar datos del proveedor"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       )}
 
       <SupplierModal open={modalOpen} onClose={closeModal} supplierId={editId} />
