@@ -49,9 +49,17 @@ export const supabase = globalForSupabase.__TELVAL_SUPABASE__ ?? (globalForSupab
   },
 }))
 
-// Cliente con Service Role Key — solo para operaciones de administrador
-// (crear usuarios en Auth sin afectar la sesión activa)
-const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined
+// NOTA DE SEGURIDAD: El Service Role Key NUNCA debe incluirse en el frontend web en producción.
+// Las operaciones privilegiadas (crear usuarios, resetear contraseñas) se realizan
+// a través del microservicio backend seguro (scripts/admin-api.mjs).
+const serviceRoleKey = import.meta.env.DEV
+  ? (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined)
+  : undefined
+
+if (import.meta.env.PROD && import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn('[SEGURIDAD] VITE_SUPABASE_SERVICE_ROLE_KEY detectada en producción. Por seguridad no se cargará en el cliente.')
+}
+
 export const supabaseAdmin = globalForSupabase.__TELVAL_SUPABASE_ADMIN__ ?? (globalForSupabase.__TELVAL_SUPABASE_ADMIN__ = serviceRoleKey
   ? createClient(supabaseUrl, serviceRoleKey, {
       auth: {

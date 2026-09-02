@@ -114,6 +114,9 @@ export function useUpsertPrice() {
       queryClient.invalidateQueries({ queryKey: ['comparacion-precios'] })
       queryClient.invalidateQueries({ queryKey: ['mejor-proveedor-all'] })
       queryClient.invalidateQueries({ queryKey: ['product-counts-by-supplier'] })
+      queryClient.invalidateQueries({ queryKey: ['all-proveedores-by-product'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      queryClient.invalidateQueries({ queryKey: ['best-suppliers-cart'] })
       toast.success('Precio guardado')
     },
     onError: (e) => toast.error('Error al guardar el precio: ' + (e as Error).message),

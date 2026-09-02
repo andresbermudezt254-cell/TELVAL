@@ -1,6 +1,7 @@
 import { X, Minus, Plus, ShoppingCart, ArrowRight, Trash2 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '@/hooks/useCart'
+import { getCartItemKey } from '@/store/cartStore'
 import { formatCOP } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -56,48 +57,55 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             />
           ) : (
             <ul className="divide-y divide-gray-100">
-              {items.map(({ producto, cantidad }) => (
-                <li key={producto.id} className="flex items-center gap-3 px-4 py-3">
-                  {/* Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <ShoppingCart size={16} className="text-[#1e3a5f]" />
-                  </div>
+              {items.map(({ producto, cantidad, precio_unitario }) => {
+                const itemKey = getCartItemKey(producto.id, producto.proveedor_id)
+                const price = precio_unitario ?? producto.precio_unitario ?? producto.precio_minimo ?? 0
+                return (
+                  <li key={itemKey} className="flex items-center gap-3 px-4 py-3">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <ShoppingCart size={16} className="text-[#1e3a5f]" />
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{producto.nombre}</p>
-                    <p className="text-xs text-gray-500">{producto.unidad_medida} · {producto.codigo}</p>
-                    {producto.precio_minimo && (
-                      <p className="text-xs font-semibold text-[#1e3a5f]">
-                        {formatCOP(producto.precio_minimo * cantidad)}
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{producto.nombre}</p>
+                      <p className="text-xs text-gray-500">
+                        {producto.unidad_medida} · {producto.codigo || 'SIN-COD'}
+                        {producto.proveedor_nombre ? ` · ${producto.proveedor_nombre}` : ''}
                       </p>
-                    )}
-                  </div>
+                      {price > 0 && (
+                        <p className="text-xs font-semibold text-[#1e3a5f]">
+                          {formatCOP(price * cantidad)}
+                        </p>
+                      )}
+                    </div>
 
-                  {/* Controls */}
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => updateCantidad(producto.id, cantidad - 1)}
-                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors"
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="w-7 text-center text-sm font-medium">{cantidad}</span>
-                    <button
-                      onClick={() => updateCantidad(producto.id, cantidad + 1)}
-                      className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors"
-                    >
-                      <Plus size={12} />
-                    </button>
-                    <button
-                      onClick={() => removeItem(producto.id)}
-                      className="ml-1 w-6 h-6 rounded flex items-center justify-center hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    {/* Controls */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => updateCantidad(producto.id, cantidad - 1, producto.proveedor_id)}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors"
+                      >
+                        <Minus size={12} />
+                      </button>
+                      <span className="w-7 text-center text-sm font-medium">{cantidad}</span>
+                      <button
+                        onClick={() => updateCantidad(producto.id, cantidad + 1, producto.proveedor_id)}
+                        className="w-6 h-6 rounded flex items-center justify-center hover:bg-gray-100 text-gray-500 transition-colors"
+                      >
+                        <Plus size={12} />
+                      </button>
+                      <button
+                        onClick={() => removeItem(producto.id, producto.proveedor_id)}
+                        className="ml-1 w-6 h-6 rounded flex items-center justify-center hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>

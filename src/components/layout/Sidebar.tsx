@@ -32,10 +32,7 @@ const adminLinks = [
   { to: '/admin/reportes', icon: BarChart3, label: 'Reportes' },
 ]
 
-const superAdminLinks = [
-  ...adminLinks,
-  { to: '/admin/usuarios', icon: Users, label: 'Usuarios' },
-]
+const superAdminLinks = adminLinks
 
 const warehouseLinks = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },

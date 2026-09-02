@@ -183,6 +183,8 @@ export interface CartItem {
   item_ppto?: string
   item_sinco_adpro?: string
   unidad_medida_item?: string
+  proveedor_sugerido_id?: number
+  precio_unitario?: number
 }
 
 export interface NuevaRequisicionForm {
@@ -200,6 +202,8 @@ export interface NuevaRequisicionForm {
     item_ppto?: string
     item_sinco_adpro?: string
     unidad_medida_item?: string
+    proveedor_sugerido_id?: number
+    precio_unitario?: number
   }>
 }
 

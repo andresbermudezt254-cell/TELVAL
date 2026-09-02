@@ -74,7 +74,11 @@ function ProductModal({ open, onClose, productId }: { open: boolean; onClose: ()
       if (error) throw error
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['prices-for-product', productId] })
+      qc.invalidateQueries({ queryKey: ['comparacion-precios', productId] })
+      qc.invalidateQueries({ queryKey: ['all-proveedores-by-product'] })
+      qc.invalidateQueries({ queryKey: ['products'] })
+      qc.invalidateQueries({ queryKey: ['supplier-catalog'] })
+      qc.invalidateQueries({ queryKey: ['supplier-products'] })
       toast.success('Precio eliminado')
     },
   })
@@ -115,6 +119,11 @@ function ProductModal({ open, onClose, productId }: { open: boolean; onClose: ()
 
     toast.success(productId ? 'Producto actualizado' : 'Producto creado')
     qc.invalidateQueries({ queryKey: ['products'] })
+    qc.invalidateQueries({ queryKey: ['all-proveedores-by-product'] })
+    qc.invalidateQueries({ queryKey: ['comparacion-precios', pid] })
+    qc.invalidateQueries({ queryKey: ['product', pid] })
+    qc.invalidateQueries({ queryKey: ['supplier-catalog'] })
+    qc.invalidateQueries({ queryKey: ['supplier-products'] })
     setPrecios({})
     reset()
     onClose()

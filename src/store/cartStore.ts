@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { CartItem, Producto } from '@/types'
 
+export function getCartItemKey(productoId: number, proveedorId?: number): string {
+  return `${productoId}_${proveedorId ?? 0}`
+}
+
 interface CartState {
   items: CartItem[]
   addItem: (producto: Producto, cantidad?: number) => void
@@ -17,6 +21,14 @@ interface CartState {
   totalEstimado: () => number
 }
 
+function itemMatches(item: CartItem, productoId: number, proveedorId?: number): boolean {
+  if (item.producto.id !== productoId) return false
+  if (proveedorId === undefined) return true
+  const itemProv = item.producto.proveedor_id ?? 0
+  const targetProv = proveedorId ?? 0
+  return itemProv === targetProv
+}
+
 export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
@@ -24,29 +36,36 @@ export const useCartStore = create<CartState>()(
 
       addItem: (producto, cantidad = 1) => {
         set((state) => {
-          // Buscar producto existente por ID + proveedor_id
-          const existing = state.items.find((i) => 
-            i.producto.id === producto.id && 
-            i.producto.proveedor_id === producto.proveedor_id
+          const provId = producto.proveedor_id ?? 0
+          const existing = state.items.find((i) =>
+            i.producto.id === producto.id && (i.producto.proveedor_id ?? 0) === provId
           )
+
           if (existing) {
             return {
               items: state.items.map((i) =>
-                (i.producto.id === producto.id && i.producto.proveedor_id === producto.proveedor_id)
+                (i.producto.id === producto.id && (i.producto.proveedor_id ?? 0) === provId)
                   ? { ...i, cantidad: i.cantidad + cantidad }
                   : i
               ),
             }
           }
-          return { items: [...state.items, { producto, cantidad, notas: '' }] }
+
+          const newItem: CartItem = {
+            producto,
+            cantidad,
+            notas: '',
+            proveedor_sugerido_id: producto.proveedor_id ? Number(producto.proveedor_id) : undefined,
+            precio_unitario: producto.precio_unitario ?? producto.precio_minimo ?? undefined,
+          }
+
+          return { items: [...state.items, newItem] }
         })
       },
 
       removeItem: (productoId, proveedorId) => {
         set((state) => ({
-          items: state.items.filter((i) => 
-            !(i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
-          )
+          items: state.items.filter((i) => !itemMatches(i, productoId, proveedorId)),
         }))
       },
 
@@ -57,7 +76,7 @@ export const useCartStore = create<CartState>()(
         }
         set((state) => ({
           items: state.items.map((i) =>
-            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+            itemMatches(i, productoId, proveedorId)
               ? { ...i, cantidad }
               : i
           ),
@@ -67,7 +86,7 @@ export const useCartStore = create<CartState>()(
       updateNotas: (productoId, notas, proveedorId) => {
         set((state) => ({
           items: state.items.map((i) =>
-            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+            itemMatches(i, productoId, proveedorId)
               ? { ...i, notas }
               : i
           ),
@@ -77,7 +96,7 @@ export const useCartStore = create<CartState>()(
       updatePpto: (productoId, itemPpto, proveedorId) => {
         set((state) => ({
           items: state.items.map((i) =>
-            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+            itemMatches(i, productoId, proveedorId)
               ? { ...i, item_ppto: itemPpto }
               : i
           ),
@@ -87,7 +106,7 @@ export const useCartStore = create<CartState>()(
       updateSinco: (productoId, itemSincoAdpro, proveedorId) => {
         set((state) => ({
           items: state.items.map((i) =>
-            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+            itemMatches(i, productoId, proveedorId)
               ? { ...i, item_sinco_adpro: itemSincoAdpro }
               : i
           ),
@@ -97,7 +116,7 @@ export const useCartStore = create<CartState>()(
       updateUnidadMedida: (productoId, unidadMedida, proveedorId) => {
         set((state) => ({
           items: state.items.map((i) =>
-            (i.producto.id === productoId && (proveedorId === undefined || i.producto.proveedor_id === proveedorId))
+            itemMatches(i, productoId, proveedorId)
               ? { ...i, unidad_medida_item: unidadMedida }
               : i
           ),
@@ -111,10 +130,10 @@ export const useCartStore = create<CartState>()(
       totalItems: () => get().items.reduce((sum, i) => sum + i.cantidad, 0),
 
       totalEstimado: () =>
-        get().items.reduce(
-          (sum, i) => sum + (i.producto.precio_unitario ?? i.producto.precio_minimo ?? 0) * i.cantidad,
-          0
-        ),
+        get().items.reduce((sum, i) => {
+          const price = i.precio_unitario ?? i.producto.precio_unitario ?? i.producto.precio_minimo ?? 0
+          return sum + price * i.cantidad
+        }, 0),
     }),
     {
       name: 'telval-cart',

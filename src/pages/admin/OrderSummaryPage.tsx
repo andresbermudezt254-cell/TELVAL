@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Truck,
   Package,
@@ -51,6 +51,7 @@ const URGENCIA: Record<string, { label: string; rowBg: string; badge: string; Ic
 const CATEGORIAS_FILTRO = [
   { value: 'URGENTE', label: 'Urgente' },
   { value: 'IMPORTANTE', label: 'Importante' },
+  { value: 'MODERADA', label: 'Moderada' },
   { value: 'PROGRAMADA', label: 'Programada' },
 ]
 
@@ -59,7 +60,7 @@ export default function OrderSummaryPage() {
     'PENDIENTE', 'EN_REVISION', 'APROBADA', 'EN_COMPRA',
   ])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-  const [activeCategorias, setActiveCategorias] = useState<string[]>(['URGENTE', 'IMPORTANTE', 'PROGRAMADA'])
+  const [activeCategorias, setActiveCategorias] = useState<string[]>(['URGENTE', 'IMPORTANTE', 'MODERADA', 'PROGRAMADA'])
 
   const { data: items, isLoading } = useOrderSummary(activeEstados, activeCategorias)
   const marcarItem = useMarcarItemCompletado()

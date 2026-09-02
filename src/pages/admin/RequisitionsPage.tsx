@@ -28,13 +28,14 @@ const ESTADOS = Object.keys(ESTADO_CONFIG) as Array<EstadoRequisicion | 'all'>
 const CATEGORIAS = [
   { value: 'URGENTE', label: 'Urgente' },
   { value: 'IMPORTANTE', label: 'Importante' },
+  { value: 'MODERADA', label: 'Moderada' },
   { value: 'PROGRAMADA', label: 'Programada' },
 ]
 
 export default function RequisitionsPage() {
   const navigate = useNavigate()
   const [estadoFilter, setEstadoFilter] = useState<EstadoRequisicion | undefined>()
-  const [categoriaFilter, setCategoriaFilter] = useState<string[]>(['URGENTE', 'IMPORTANTE', 'PROGRAMADA'])
+  const [categoriaFilter, setCategoriaFilter] = useState<string[]>(['URGENTE', 'IMPORTANTE', 'MODERADA', 'PROGRAMADA'])
   const [page, setPage] = useState(0)
   const [confirmAction, setConfirmAction] = useState<{
     id: number; codigo: string; action: 'APROBADA' | 'RECHAZADA' | 'EN_COMPRA' | 'COMPLETADA'

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { requisicionSchema, type RequisicionFormData, especialidadOptions, categoriaOptions } from '@/lib/validations'
 import { useCart } from '@/hooks/useCart'
+import { getCartItemKey } from '@/store/cartStore'
 import { useCreateRequisition } from '@/hooks/useRequisitions'
 import { supabase } from '@/lib/supabase'
 import { Input } from '@/components/ui/Input'
@@ -150,7 +151,6 @@ export default function NewRequisitionPage() {
     register,
     handleSubmit,
     watch,
-    reset,
     formState: { errors },
   } = useForm<RequisicionFormData>({
     resolver: zodResolver(requisicionSchema),
@@ -172,6 +172,8 @@ export default function NewRequisitionPage() {
         item_ppto: i.item_ppto,
         item_sinco_adpro: i.item_sinco_adpro,
         unidad_medida_item: i.unidad_medida_item,
+        proveedor_sugerido_id: i.producto.proveedor_id ? Number(i.producto.proveedor_id) : (i.proveedor_sugerido_id ? Number(i.proveedor_sugerido_id) : undefined),
+        precio_unitario: i.producto.precio_unitario ?? i.precio_unitario ?? undefined,
       })),
     })
     clearCart()
@@ -299,12 +301,15 @@ export default function NewRequisitionPage() {
               </div>
 
               <div className="divide-y divide-gray-100">
-                {items.map(({ producto, cantidad, item_ppto, item_sinco_adpro, unidad_medida_item }) => {
+                {items.map(({ producto, cantidad, item_ppto, item_sinco_adpro, unidad_medida_item, precio_unitario, proveedor_sugerido_id }) => {
                   const best = bestSuppliers?.get(producto.id)
-                  const unitPrice = best?.precio_unitario ?? (producto as any).precio_minimo
+                  const unitPrice = precio_unitario ?? producto.precio_unitario ?? best?.precio_unitario ?? (producto as any).precio_minimo
                   const lineTotal = unitPrice ? unitPrice * cantidad : null
+                  const itemKey = getCartItemKey(producto.id, producto.proveedor_id)
+                  const displaySupplierName = producto.proveedor_nombre || (best?.proveedor_id === (producto.proveedor_id || proveedor_sugerido_id) ? best?.proveedor_nombre : undefined)
+
                   return (
-                    <div key={producto.id} className="px-6 py-4">
+                    <div key={itemKey} className="px-6 py-4">
                       <div className="flex items-start gap-4">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                           <span className="text-xs font-bold text-slate-400 uppercase">
@@ -313,7 +318,10 @@ export default function NewRequisitionPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-900 text-sm">{producto.nombre}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">{producto.codigo} · {producto.unidad_medida}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {producto.codigo} · {producto.unidad_medida}
+                            {displaySupplierName ? ` · ${displaySupplierName}` : ''}
+                          </p>
 
                           <div className="mt-3 space-y-3">
                             <div className="grid grid-cols-3 gap-3">
@@ -342,14 +350,14 @@ export default function NewRequisitionPage() {
                             />
                           </div>
 
-                          {best ? (
+                          {unitPrice ? (
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1">
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                <span className="text-xs font-semibold text-emerald-700">{best.proveedor_nombre}</span>
-                                <span className="text-xs text-emerald-600 font-bold">· {formatCOP(best.precio_unitario)}</span>
+                                <span className="text-xs font-semibold text-emerald-700">{displaySupplierName || best?.proveedor_nombre || 'Proveedor'}</span>
+                                <span className="text-xs text-emerald-600 font-bold">· {formatCOP(unitPrice)}</span>
                               </div>
-                              {best.proveedor_whatsapp && (
+                              {best?.proveedor_whatsapp && (
                                 <a
                                   href={buildWhatsAppUrl(best.proveedor_whatsapp, `Hola ${best.proveedor_nombre}, necesito cotizar: ${producto.nombre} (${cantidad} ${producto.unidad_medida})`)}
                                   target="_blank" rel="noopener noreferrer"
@@ -369,19 +377,19 @@ export default function NewRequisitionPage() {
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <div className="flex flex-col items-end gap-1">
                             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                              <button type="button" onClick={() => updateCantidad(producto.id, Math.max(1, cantidad - 1))}
+                              <button type="button" onClick={() => updateCantidad(producto.id, Math.max(1, cantidad - 1), producto.proveedor_id)}
                                 className="px-2.5 py-1.5 text-gray-400 hover:bg-gray-100 text-sm font-bold leading-none">−</button>
                               <input type="number" min="1" value={cantidad}
-                                onChange={(e) => updateCantidad(producto.id, Math.max(1, Number(e.target.value)))}
+                                onChange={(e) => updateCantidad(producto.id, Math.max(1, Number(e.target.value)), producto.proveedor_id)}
                                 className="w-12 text-center border-x border-gray-200 py-1.5 text-sm font-semibold focus:outline-none" />
-                              <button type="button" onClick={() => updateCantidad(producto.id, cantidad + 1)}
+                              <button type="button" onClick={() => updateCantidad(producto.id, cantidad + 1, producto.proveedor_id)}
                                 className="px-2.5 py-1.5 text-gray-400 hover:bg-gray-100 text-sm font-bold leading-none">+</button>
                             </div>
                             {lineTotal !== null && (
                               <span className="text-sm font-bold text-[#1e3a5f]"><CurrencyCOP value={lineTotal} /></span>
                             )}
                           </div>
-                          <button type="button" onClick={() => removeItem(producto.id)}
+                          <button type="button" onClick={() => removeItem(producto.id, producto.proveedor_id)}
                             className="p-2 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors">
                             <Trash2 size={15} />
                           </button>

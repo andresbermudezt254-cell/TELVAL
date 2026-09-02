@@ -64,7 +64,7 @@ export function useRequisitionById(id?: number) {
           proveedor_final:proveedores!proveedor_final_id(id, nombre, whatsapp, contacto_nombre),
           detalles:detalle_requisicion(
             id, requisicion_id, producto_id, proveedor_sugerido_id, cantidad,
-            precio_unitario, total_linea, notas, item_ppto, item_sinco_adpro, unidad_medida_item, created_at,
+            precio_unitario, total_linea, notas, item_ppto, item_sinco_adpro, created_at,
             completado, completado_at, completado_por,
             producto:productos(id, codigo, nombre, unidad_medida, categoria_id),
             proveedor_sugerido:proveedores!proveedor_sugerido_id(id, nombre, whatsapp, codigo_interno)
@@ -80,10 +80,10 @@ export function useRequisitionById(id?: number) {
       return (data ?? null) as unknown as Requisicion | null
     },
     enabled: !!id,
-    staleTime: 0,
+    staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
     refetchOnReconnect: true,
   })
 }
@@ -116,6 +116,10 @@ export function useSaveDraftRequisition() {
         if (typeof b.producto_id === 'number') priceMap.set(b.producto_id, b)
       })
       const totalEstimado = form.items.reduce((sum, item) => {
+        const customPrice = (item as any).precio_unitario
+        if (customPrice !== undefined && customPrice !== null && Number(customPrice) > 0) {
+          return sum + Number(customPrice) * Number(item.cantidad)
+        }
         const best = priceMap.get(item.producto_id)
         return sum + Number(best?.precio_unitario ?? 0) * Number(item.cantidad)
       }, 0)
@@ -163,6 +167,8 @@ export function useSaveDraftRequisition() {
 
       const detalles = form.items.map((item) => {
         const best = priceMap.get(item.producto_id)
+        const customProvId = (item as any).proveedor_sugerido_id
+        const customPrice = (item as any).precio_unitario
         return {
           requisicion_id: req.id,
           producto_id: item.producto_id,
@@ -170,9 +176,8 @@ export function useSaveDraftRequisition() {
           notas: item.notas || null,
           item_ppto: item.item_ppto || null,
           item_sinco_adpro: item.item_sinco_adpro || null,
-          unidad_medida_item: item.unidad_medida_item || null,
-          proveedor_sugerido_id: best?.proveedor_id ?? null,
-          precio_unitario: best?.precio_unitario ?? null,
+          proveedor_sugerido_id: (customProvId && Number(customProvId) > 0) ? Number(customProvId) : (best?.proveedor_id ?? null),
+          precio_unitario: (customPrice !== undefined && customPrice !== null && Number(customPrice) > 0) ? Number(customPrice) : (best?.precio_unitario ?? null),
         }
       })
 
@@ -247,6 +252,10 @@ export function useCreateRequisition() {
       })
 
       const totalEstimado = form.items.reduce((sum, item) => {
+        const customPrice = (item as any).precio_unitario
+        if (customPrice !== undefined && customPrice !== null && Number(customPrice) > 0) {
+          return sum + Number(customPrice) * Number(item.cantidad)
+        }
         const best = priceMap.get(item.producto_id)
         return sum + Number(best?.precio_unitario ?? 0) * Number(item.cantidad)
       }, 0)
@@ -294,6 +303,8 @@ export function useCreateRequisition() {
 
       const detalles = form.items.map((item) => {
         const best = priceMap.get(item.producto_id)
+        const customProvId = (item as any).proveedor_sugerido_id
+        const customPrice = (item as any).precio_unitario
         return {
           requisicion_id: req.id,
           producto_id: item.producto_id,
@@ -301,9 +312,8 @@ export function useCreateRequisition() {
           notas: item.notas || null,
           item_ppto: item.item_ppto || null,
           item_sinco_adpro: item.item_sinco_adpro || null,
-          unidad_medida_item: item.unidad_medida_item || null,
-          proveedor_sugerido_id: best?.proveedor_id ?? null,
-          precio_unitario: best?.precio_unitario ?? null,
+          proveedor_sugerido_id: (customProvId && Number(customProvId) > 0) ? Number(customProvId) : (best?.proveedor_id ?? null),
+          precio_unitario: (customPrice !== undefined && customPrice !== null && Number(customPrice) > 0) ? Number(customPrice) : (best?.precio_unitario ?? null),
         }
       })
 
@@ -426,6 +436,31 @@ export function useMarcarItemCompletado() {
 
   return useMutation({
     mutationFn: async ({ itemId, requisicionId, completado }: { itemId: number; requisicionId: number; completado: boolean }) => {
+      // Intentar primero procedimiento almacenado atómico
+      if (user) {
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('marcar_item_recibido_v2', {
+            p_user_id: user.id,
+            p_user_email: user.email,
+            p_user_nombre: user.nombre_completo || user.email,
+            p_user_rol: user.rol,
+            p_item_id: itemId,
+            p_req_id: requisicionId,
+            p_completado: completado,
+          })
+
+          const res = rpcData as { success?: boolean } | null
+          if (!rpcError && res?.success) {
+            return res
+          }
+          if (rpcError) {
+            console.warn('[useMarcarItemCompletado] RPC falló, ejecutando fallback seguro en cliente:', rpcError.message)
+          }
+        } catch (e) {
+          console.warn('[useMarcarItemCompletado] RPC no disponible, ejecutando fallback local:', e)
+        }
+      }
+
       const { data: reqPrev } = await supabase
         .from('requisiciones')
         .select('estado, codigo, empleado_id, admin_id')
@@ -614,7 +649,7 @@ export function useUpdateDetalleCantidad() {
         return { ...old, total_estimado: result.total_estimado, detalles }
       })
 
-      queryClient.setQueryData(['requisitions'], (old: any) => {
+      queryClient.setQueriesData({ queryKey: ['requisitions'] }, (old: any) => {
         if (!old) return old
         if (Array.isArray(old)) {
           return old.map((req: any) => req.id === vars.requisicionId ? { ...req, total_estimado: result.total_estimado } : req)
@@ -856,7 +891,7 @@ export function useRequisitionHistory(requisicionId?: number) {
 // Consolidado de compras: items de requisiciones activas agrupados para asignar a proveedores
 export function useOrderSummary(
   estados: string[] = ['PENDIENTE', 'EN_REVISION', 'APROBADA', 'EN_COMPRA'],
-  categorias: string[] = ['URGENTE', 'IMPORTANTE', 'PROGRAMADA']
+  categorias: string[] = ['URGENTE', 'IMPORTANTE', 'MODERADA', 'PROGRAMADA']
 ) {
   return useQuery({
     queryKey: ['order-summary', estados, categorias],

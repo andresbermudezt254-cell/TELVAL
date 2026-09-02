@@ -27,7 +27,7 @@ export const especialidadOptions = [
   'VIAS NOCHE',
 ] as const
 
-export const categoriaOptions = ['URGENTE', 'IMPORTANTE', 'PROGRAMADA'] as const
+export const categoriaOptions = ['URGENTE', 'IMPORTANTE', 'MODERADA', 'PROGRAMADA'] as const
 
 export const requisicionSchema = z.object({
   especialidad: z.enum(especialidadOptions),
