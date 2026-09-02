@@ -12,33 +12,59 @@ interface StatsCardProps {
 }
 
 const colorMap = {
-  blue:   { accent: 'border-l-blue-500', iconBg: 'bg-blue-50', iconColor: 'text-blue-700' },
-  orange: { accent: 'border-l-orange-500', iconBg: 'bg-orange-50', iconColor: 'text-orange-700' },
-  green:  { accent: 'border-l-emerald-500', iconBg: 'bg-emerald-50', iconColor: 'text-emerald-700' },
-  teal:   { accent: 'border-l-teal-500', iconBg: 'bg-teal-50', iconColor: 'text-teal-700' },
-  purple: { accent: 'border-l-violet-500', iconBg: 'bg-violet-50', iconColor: 'text-violet-700' },
+  blue: {
+    topBar: 'bg-blue-600',
+    iconBg: 'bg-blue-50/90 text-blue-700 border-blue-200/70',
+    ring: 'hover:border-blue-300',
+  },
+  orange: {
+    topBar: 'bg-[#f97316]',
+    iconBg: 'bg-orange-50/90 text-[#f97316] border-orange-200/70',
+    ring: 'hover:border-orange-300',
+  },
+  green: {
+    topBar: 'bg-emerald-600',
+    iconBg: 'bg-emerald-50/90 text-emerald-700 border-emerald-200/70',
+    ring: 'hover:border-emerald-300',
+  },
+  teal: {
+    topBar: 'bg-teal-600',
+    iconBg: 'bg-teal-50/90 text-teal-700 border-teal-200/70',
+    ring: 'hover:border-teal-300',
+  },
+  purple: {
+    topBar: 'bg-violet-600',
+    iconBg: 'bg-violet-50/90 text-violet-700 border-violet-200/70',
+    ring: 'hover:border-violet-300',
+  },
 }
 
 export function StatsCard({ title, value, description, icon: Icon, trend, color = 'blue' }: StatsCardProps) {
   const c = colorMap[color]
   const trendUp = (trend?.value ?? 0) >= 0
+
   return (
-    <div className={`bg-white border border-slate-200 border-l-4 ${c.accent} rounded-xl p-5 flex gap-4 items-start shadow-sm hover:shadow-md transition-shadow`}>
-      <div className={`${c.iconBg} rounded-lg p-2.5 flex-shrink-0`}>
-        <Icon size={22} className={c.iconColor} />
+    <div className={`relative bg-white border border-slate-200/80 rounded-2xl p-5 flex gap-4 items-start shadow-xs hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 overflow-hidden ${c.ring}`}>
+      {/* Top subtle color indicator */}
+      <div className={`absolute top-0 left-0 right-0 h-1 ${c.topBar}`} />
+
+      <div className={`${c.iconBg} border rounded-xl p-3 flex-shrink-0 shadow-2xs`}>
+        <Icon size={22} />
       </div>
+
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">{title}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-0.5 leading-tight">{value}</p>
-        {description && <p className="text-xs text-slate-400 mt-1">{description}</p>}
+        <p className="text-[11px] text-slate-400 uppercase tracking-widest font-semibold">{title}</p>
+        <div className="text-2xl font-black text-slate-900 mt-1 leading-tight tracking-tight">{value}</div>
+        {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
         {trend && (
-          <div className="flex items-center gap-1 mt-1.5">
+          <div className="flex items-center gap-1.5 mt-2">
             {trendUp
-              ? <TrendingUp size={11} className="text-emerald-600" />
-              : <TrendingDown size={11} className="text-red-600" />}
-            <span className="text-[11px] font-semibold text-slate-500">
-              {trendUp ? '+' : ''}{trend.value}% {trend.label}
+              ? <TrendingUp size={12} className="text-emerald-600" />
+              : <TrendingDown size={12} className="text-rose-600" />}
+            <span className={`text-[11px] font-bold ${trendUp ? 'text-emerald-700' : 'text-rose-700'}`}>
+              {trendUp ? '+' : ''}{trend.value}%
             </span>
+            <span className="text-[11px] text-slate-400 font-medium">{trend.label}</span>
           </div>
         )}
       </div>

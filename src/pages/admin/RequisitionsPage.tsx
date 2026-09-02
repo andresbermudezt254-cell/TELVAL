@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Clock, CheckCircle2, ShoppingCart, XCircle, ChevronRight, RotateCcw, PackageCheck, Plus, Trash2 } from 'lucide-react'
+import { Clock, CheckCircle2, ShoppingCart, XCircle, ChevronRight, RotateCcw, PackageCheck, Plus, Trash2, ClipboardList } from 'lucide-react'
 import { useRequisitions, useUpdateRequisitionStatus, useDeleteRequisition } from '@/hooks/useRequisitions'
 import { RequisitionStatusBadge as StatusBadge } from '@/components/requisitions/StatusBadge'
 import { CategoryBadge } from '@/components/requisitions/CategoryBadge'
@@ -68,73 +68,102 @@ export default function RequisitionsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">Requisiciones</h1>
-          <p className="text-xs text-gray-400 mt-0.5">{total} {total === 1 ? 'requisición' : 'requisiciones'} en total</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200/70 flex items-center justify-center text-[#1e3a5f] font-black text-sm shadow-2xs">
+            <ClipboardList size={20} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Requisiciones</h1>
+              <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                {total} {total === 1 ? 'registro' : 'registros'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">Control de solicitudes, aprobaciones y estado de compras</p>
+          </div>
         </div>
+
         <button
           onClick={() => navigate('/nueva-requisicion')}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-sm font-semibold transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-bold tracking-wide transition-all shadow-md shadow-orange-950/20 hover:-translate-y-0.5"
         >
-          <Plus size={15} />
-          Nueva
+          <Plus size={16} />
+          <span>Nueva Requisición</span>
         </button>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {ESTADOS.map((e) => {
-          const cfg = ESTADO_CONFIG[e]
-          const isActive = (e === 'all' && !estadoFilter) || estadoFilter === e
-          return (
-            <button
-              key={e}
-              onClick={() => { setEstadoFilter(e === 'all' ? undefined : e as EstadoRequisicion); setPage(0) }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                isActive
-                  ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
-              }`}
-            >
-              {!isActive && cfg.icon && <span className={cfg.color}>{cfg.icon}</span>}
-              {cfg.label}
-            </button>
-          )
-        })}
-      </div>
+      {/* Filter toolbar card */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+        {/* Filter chips - Estados */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold min-w-[70px]">Estado:</span>
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {ESTADOS.map((e) => {
+              const cfg = ESTADO_CONFIG[e]
+              const isActive = (e === 'all' && !estadoFilter) || estadoFilter === e
+              return (
+                <button
+                  key={e}
+                  onClick={() => { setEstadoFilter(e === 'all' ? undefined : e as EstadoRequisicion); setPage(0) }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    isActive
+                      ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm'
+                      : 'bg-slate-50/80 text-slate-600 border-slate-200/80 hover:bg-white hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
+                  }`}
+                >
+                  {!isActive && cfg.icon && <span className={cfg.color}>{cfg.icon}</span>}
+                  <span>{cfg.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-gray-400 font-medium">Categorías:</span>
-        {CATEGORIAS.map((cat) => {
-          const active = categoriaFilter.includes(cat.value)
-          return (
-            <button
-              key={cat.value}
-              onClick={() => setCategoriaFilter((prev) =>
-                prev.includes(cat.value) ? prev.filter((x) => x !== cat.value) : [...prev, cat.value]
-              )}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                active
-                  ? 'bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm'
-                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#1e3a5f] hover:text-[#1e3a5f]'
-              }`}
-            >
-              {cat.label}
-            </button>
-          )
-        })}
+        {/* Filter chips - Categorías */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-3 border-t border-slate-100">
+          <span className="text-[11px] uppercase tracking-wider text-slate-400 font-bold min-w-[70px]">Prioridad:</span>
+          <div className="flex flex-wrap gap-1.5 items-center">
+            {CATEGORIAS.map((cat) => {
+              const active = categoriaFilter.includes(cat.value)
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategoriaFilter((prev) =>
+                    prev.includes(cat.value) ? prev.filter((x) => x !== cat.value) : [...prev, cat.value]
+                  )}
+                  className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                    active
+                      ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                      : 'bg-slate-50/80 text-slate-600 border-slate-200/80 hover:bg-white hover:border-slate-800 hover:text-slate-800'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              )
+            })}
+
+            {(estadoFilter || categoriaFilter.length < CATEGORIAS.length) && (
+              <button
+                onClick={() => { setEstadoFilter(undefined); setCategoriaFilter(CATEGORIAS.map(c => c.value)); setPage(0) }}
+                className="ml-auto text-xs text-rose-600 hover:text-rose-700 font-bold transition-colors underline"
+              >
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
         <PageLoader />
       ) : !requisitions.length ? (
-        <EmptyState title="Sin requisiciones" description="No hay requisiciones con estos filtros." />
+        <EmptyState title="Sin requisiciones" description="No hay requisiciones con los filtros actuales." />
       ) : (
         <>
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto shadow-sm">
+          <div className="bg-white rounded-3xl border border-slate-200/90 overflow-x-auto shadow-xs">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -150,19 +179,30 @@ export default function RequisitionsPage() {
                   <tr
                     key={req.id}
                     onClick={() => navigate(`/admin/requisiciones/${req.id}`)}
-                    className="border-b border-gray-50 last:border-0 hover:bg-blue-50/40 cursor-pointer transition-colors group"
+                    className="border-b border-gray-100 last:border-0 hover:bg-blue-50/40 cursor-pointer transition-colors group"
                   >
-                    <td className="px-4 py-3.5 font-mono font-bold text-[#1e3a5f] text-xs">{req.codigo}</td>
-                    <td className="px-4 py-3.5 text-gray-700 text-sm font-medium">{(req as any).empleado?.nombre_completo ?? '—'}</td>
-                    <td className="px-4 py-3.5 text-xs text-gray-500">{req.especialidad}</td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-mono font-bold text-[#1e3a5f] bg-slate-100/80 border border-slate-200 px-2 py-0.5 rounded-md text-xs group-hover:bg-blue-50 group-hover:border-blue-200/80 transition-colors shadow-2xs">
+                        {req.codigo}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200/80 text-slate-700 font-bold text-[11px] flex items-center justify-center flex-shrink-0 shadow-2xs">
+                          {((req as any).empleado?.nombre_completo ?? 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-gray-900 text-sm font-medium">{(req as any).empleado?.nombre_completo ?? '—'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-gray-600 font-medium">{req.especialidad}</td>
                     <td className="px-4 py-3.5 text-xs text-gray-600">
-                      <span className="block font-medium text-gray-700">{req.punto}</span>
-                      <span className="text-gray-400">{req.numero_aviso}</span>
+                      <span className="block font-semibold text-gray-800">{req.punto}</span>
+                      <span className="text-gray-400 font-mono text-[11px]">Av: {req.numero_aviso}</span>
                     </td>
                     <td className="px-4 py-3.5"><CategoryBadge categoria={req.categoria} /></td>
                     <td className="px-4 py-3.5"><StatusBadge estado={req.estado} /></td>
-                    <td className="px-4 py-3.5 text-xs text-gray-500">{req.fecha_maxima_entrega ? formatDate(req.fecha_maxima_entrega) : '—'}</td>
-                    <td className="px-4 py-3.5 font-semibold text-gray-900 whitespace-nowrap text-sm"><CurrencyCOP value={req.total_estimado} /></td>
+                    <td className="px-4 py-3.5 text-xs text-gray-500 font-medium">{req.fecha_maxima_entrega ? formatDate(req.fecha_maxima_entrega) : '—'}</td>
+                    <td className="px-4 py-3.5 font-bold text-slate-900 whitespace-nowrap text-sm"><CurrencyCOP value={req.total_estimado} /></td>
                     <td className="px-4 py-3.5" onClick={(ev) => ev.stopPropagation()}>
                       <div className="flex gap-1 flex-wrap">
                         {req.estado === 'PENDIENTE' && (

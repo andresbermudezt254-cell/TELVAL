@@ -32,7 +32,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const initials = catName.substring(0, 2).toUpperCase() || 'PR'
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-200 flex flex-col group">
+    <div className="bg-white rounded-2xl border border-slate-200/80 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col group overflow-hidden shadow-xs">
       {/* Header */}
       <div className={`h-24 ${colors.bg} rounded-t-2xl flex items-center justify-center relative overflow-hidden`}>
         {product.imagen_url ? (
@@ -71,17 +71,17 @@ export function ProductCard({ product }: ProductCardProps) {
 
               {/* Proveedor - Destacado en primera plana */}
               {product.proveedor_nombre && (
-                <div className={`rounded-lg px-2 py-1.5 flex items-center gap-1.5 ${
+                <div className={`rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 shadow-2xs ${
                   product.es_mas_barato 
-                    ? 'bg-emerald-50 border border-emerald-200' 
-                    : 'bg-blue-50 border border-blue-100'
+                    ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80' 
+                    : 'bg-slate-50 border border-slate-200/80'
                 }`}>
-                  {product.es_mas_barato && <TrendingDown size={10} className="text-emerald-600 flex-shrink-0" />}
-                  {!product.es_mas_barato && <Building2 size={10} className="text-blue-600 flex-shrink-0" />}
-                  <p className={`text-[10px] font-semibold truncate ${
+                  {product.es_mas_barato && <TrendingDown size={11} className="text-emerald-600 flex-shrink-0" />}
+                  {!product.es_mas_barato && <Building2 size={11} className="text-slate-500 flex-shrink-0" />}
+                  <p className={`text-[11px] font-bold truncate ${
                     product.es_mas_barato 
-                      ? 'text-emerald-700' 
-                      : 'text-blue-700'
+                      ? 'text-emerald-800' 
+                      : 'text-slate-700'
                   }`}>
                     {product.es_mas_barato ? '🏆 ' : ''}{product.proveedor_nombre}
                   </p>

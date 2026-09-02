@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Copy, Check, MessageCircle, Clock, CheckCircle2, ShoppingCart, PackageCheck, XCircle, RotateCcw, Truck, ChevronDown, Building2, Trash2 } from 'lucide-react'
 import { useRequisitionById, useUpdateRequisitionStatus, useMarcarItemCompletado, useUpdateProveedorFinal, useUpdateDetalleCantidad, useUpdateDetalleProveedor, useDeleteDetalleRequisicion } from '@/hooks/useRequisitions'
@@ -28,31 +28,31 @@ const WORKFLOW: Array<{ estado: EstadoRequisicion; label: string; icon: React.Re
 function WorkflowBar({ estado }: { estado: EstadoRequisicion }) {
   if (estado === 'RECHAZADA') {
     return (
-      <div className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
-        <XCircle size={15} />
+      <div className="flex items-center gap-2 px-5 py-3 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-sm font-semibold shadow-xs">
+        <XCircle size={16} />
         Requisición rechazada
       </div>
     )
   }
   const currentIdx = WORKFLOW.findIndex((s) => s.estado === estado)
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-5 py-3">
+    <div className="bg-white border border-slate-200/90 rounded-2xl px-5 py-3.5 shadow-xs">
       <div className="flex items-center">
         {WORKFLOW.map((step, idx) => {
           const done = idx < currentIdx
           const active = idx === currentIdx
           return (
             <div key={step.estado} className="flex items-center flex-1 min-w-0">
-              <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
-                active  ? 'bg-[#1e3a5f] text-white'
-                : done  ? 'bg-green-50 text-green-700'
-                        : 'text-gray-300'
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                active  ? 'bg-[#1e3a5f] text-white shadow-sm ring-3 ring-blue-100'
+                : done  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
+                        : 'text-slate-400 bg-slate-50'
               }`}>
                 {step.icon}
                 <span className="hidden sm:inline">{step.label}</span>
               </div>
               {idx < WORKFLOW.length - 1 && (
-                <div className={`flex-1 h-px mx-1 ${done ? 'bg-green-300' : 'bg-gray-100'}`} />
+                <div className={`flex-1 h-0.5 mx-2 rounded-full ${done ? 'bg-emerald-400' : 'bg-slate-200'}`} />
               )}
             </div>
           )

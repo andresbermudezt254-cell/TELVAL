@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
@@ -5,7 +6,7 @@ import { StatsCard } from '@/components/dashboard/StatsCard'
 import { SpendingBarChart, TopSuppliersChart, SpendingPieChart } from '@/components/dashboard/SpendingChart'
 import { CurrencyCOP } from '@/components/ui/CurrencyCOP'
 import { PageLoader } from '@/components/ui/Spinner'
-import { Clock, CheckCircle, DollarSign, Package, Activity } from 'lucide-react'
+import { Clock, CheckCircle, DollarSign, Package, Plus, ShoppingCart, Truck, ShieldCheck } from 'lucide-react'
 
 function useDashboardStats() {
   return useQuery({
@@ -51,7 +52,6 @@ function useDashboardCharts() {
         supabase.from('productos').select('categoria:categorias(nombre)').eq('activo', true),
       ])
 
-      // Top proveedores por número de productos en catálogo
       const supplierCounts = new Map<number, { nombre: string; count: number }>()
       ppData.data?.forEach((r: any) => {
         const id = r.proveedor_id
@@ -63,7 +63,6 @@ function useDashboardCharts() {
         .sort((a, b) => b.count - a.count).slice(0, 8)
         .map((s) => ({ name: s.nombre, value: s.count }))
 
-      // Productos por categoría
       const catCounts = new Map<string, number>()
       prodData.data?.forEach((p: any) => {
         const cat = p.categoria?.nombre ?? 'Sin categoría'
@@ -80,6 +79,7 @@ function useDashboardCharts() {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const { data, isLoading } = useDashboardStats()
   const { data: charts } = useDashboardCharts()
@@ -87,59 +87,97 @@ export default function DashboardPage() {
   if (isLoading) return <PageLoader />
 
   return (
-    <div className="space-y-7 pb-6">
-      {/* Header */}
-      <div className="rounded-2xl border border-slate-200 bg-white px-6 py-6 flex items-center justify-between shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold mb-2">
-            <Activity size={13} className="text-emerald-500" /> Resumen operativo
+    <div className="space-y-6 pb-6">
+      {/* Executive Hero Banner */}
+      <div
+        className="relative rounded-3xl overflow-hidden shadow-xl text-white p-6 md:p-8"
+        style={{ background: 'linear-gradient(135deg, #0b1e36 0%, #163359 55%, #1e4577 100%)' }}
+      >
+        {/* Ambient background glow orbs */}
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-orange-500/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-blue-400/15 blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-blue-200 shadow-2xs">
+                <ShieldCheck size={13} className="text-[#f97316]" />
+                Panel Corporativo TELVAL
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-[11px] font-semibold text-emerald-300">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Operativo
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+              Hola, {user?.nombre_completo?.split(' ')[0] ?? user?.email}
+            </h1>
+            <p className="text-blue-200/80 text-xs md:text-sm max-w-xl leading-relaxed">
+              Gestión integral de compras, control de requisiciones y análisis de proveedores para mantenimientos Metro.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-            Bienvenido, {user?.nombre_completo?.split(' ')[0] ?? user?.email}
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            {new Date().toLocaleDateString('es-CO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-        <div className="hidden sm:flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3.5 py-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="text-xs font-semibold text-emerald-700">Sistema en línea</span>
+
+          {/* Quick Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => navigate('/nueva-requisicion')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white font-bold text-xs tracking-wide transition-all duration-150 shadow-lg shadow-orange-950/30 hover:shadow-orange-900/40 hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Plus size={15} />
+              <span>Nueva Requisición</span>
+            </button>
+            <button
+              onClick={() => navigate('/almacen')}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wide transition-all duration-150 backdrop-blur-sm hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <Truck size={15} className="text-blue-300" />
+              <span>Almacén</span>
+            </button>
+            <button
+              onClick={() => navigate('/catalogo')}
+              className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wide transition-all duration-150 backdrop-blur-sm hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <ShoppingCart size={15} className="text-blue-300" />
+              <span>Catálogo</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatsCard title="Pendientes" value={data?.pendingCount ?? 0} icon={Clock} color="orange" />
-        <StatsCard title="Completadas este mes" value={data?.completedCount ?? 0} icon={CheckCircle} color="green" />
-        <StatsCard title="Gasto estimado mes" value={<CurrencyCOP value={data?.totalMes} />} icon={DollarSign} color="blue" />
-        <StatsCard title="En proceso" value={data?.pendingCount ?? 0} icon={Package} color="teal" />
+        <StatsCard title="Pendientes" value={data?.pendingCount ?? 0} icon={Clock} color="orange" description="Requisiciones por revisar" />
+        <StatsCard title="Completadas este mes" value={data?.completedCount ?? 0} icon={CheckCircle} color="green" description="Materiales entregados en almacén" />
+        <StatsCard title="Gasto estimado mes" value={<CurrencyCOP value={data?.totalMes} />} icon={DollarSign} color="blue" description="Consolidado de compras" />
+        <StatsCard title="En proceso" value={data?.pendingCount ?? 0} icon={Package} color="teal" description="En compra y parciales" />
       </div>
 
-      {/* Charts row */}
-      <div>
-        <div className="flex items-end justify-between mb-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Actividad</p>
-            <h2 className="text-lg font-bold text-slate-900 mt-1">Comportamiento del abastecimiento</h2>
-          </div>
-          <span className="hidden sm:block text-xs text-slate-400">Actualización automática</span>
+      {/* Charts Section */}
+      <div className="space-y-4">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-bold">Analítica</p>
+          <h2 className="text-lg font-bold text-slate-900 mt-0.5">Comportamiento del abastecimiento</h2>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {data?.weeklySpend && (
-          <SpendingBarChart data={data.weeklySpend} title="Gasto estimado por semana (últimas 8 semanas)" />
-        )}
-        {charts?.byCategory && charts.byCategory.length > 0 && (
-          <SpendingPieChart data={charts.byCategory} title="Productos por categoría" />
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {data?.weeklySpend && (
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow">
+              <SpendingBarChart data={data.weeklySpend} title="Gasto estimado por semana (últimas 8 semanas)" />
+            </div>
+          )}
+          {charts?.byCategory && charts.byCategory.length > 0 && (
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow">
+              <SpendingPieChart data={charts.byCategory} title="Distribución de insumos por categoría" />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Top suppliers */}
       {charts?.topSuppliers && charts.topSuppliers.length > 0 && (
-        <div>
-          <div className="mb-3">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-semibold">Catálogo</p>
-            <h2 className="text-lg font-bold text-slate-900 mt-1">Proveedores con mayor cobertura</h2>
+        <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs hover:shadow-md transition-shadow">
+          <div className="mb-4">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400 font-bold">Proveedores</p>
+            <h2 className="text-lg font-bold text-slate-900 mt-0.5">Proveedores con mayor cobertura de catálogo</h2>
           </div>
           <TopSuppliersChart data={charts.topSuppliers} title="Productos activos por proveedor" />
         </div>

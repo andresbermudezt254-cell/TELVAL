@@ -38,7 +38,7 @@ export function AppLayout() {
   }, [queryClient])
 
   return (
-    <div className="flex h-screen bg-gray-50/80 overflow-hidden">
+    <div className="flex h-screen bg-slate-100/70 overflow-hidden">
       {/* Sidebar desktop */}
       <aside className="hidden md:flex w-[228px] flex-col flex-shrink-0 shadow-xl">
         <Sidebar onClose={() => setSidebarOpen(false)} />
